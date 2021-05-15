@@ -83,3 +83,9 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# VS Code
+.vscode
+
+# Virtual Env Python
+venv/
