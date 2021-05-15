@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Bill Manager App</string>
+    <string name="title">Your bills</string>
+    <string name="search_bill">Search…</string>
+</resources>
