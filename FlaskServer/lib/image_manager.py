@@ -13,7 +13,13 @@ class ImageManager:
         return image
 
     @staticmethod
-    def apply_brightness_contrast(image, alpha=1, beta=60):
+    def show_and_wait(image, title='Image'):
+        cv.imshow(title, image)
+        cv.waitKey(0)  # waits until a key is pressed
+        cv.destroyAllWindows()  # destroys the window showing image
+
+    @staticmethod
+    def apply_brightness_and_contrast(image, alpha=1, beta=60):
         # Applies brightness and contrast to the image
         # alpha - contrast (1.0 - 3.0)
         # beta  - brightness (0 - 100)

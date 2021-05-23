@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.serjthedoctor.billmanager.lib.ImageUtils
 import com.serjthedoctor.billmanager.service.BillsService
 import com.serjthedoctor.billmanager.service.ServiceFactory
 import kotlinx.coroutines.launch
@@ -19,12 +20,13 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
     )
 
     fun uploadReceiptImage(file: File) {
-        val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)
-
-        // MultipartBody.Part is used to send also the actual file name
-        val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-
         viewModelScope.launch {
+            ImageUtils.ensurePortraitImageFile(file)
+
+            val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)
+
+            // MultipartBody.Part is used to send also the actual file name
+            val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
             try {
                 val response = service.uploadReceipt(body)
                 response.date?.let { Log.d(TAG, it) }

@@ -12,13 +12,10 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.Text
-import com.google.mlkit.vision.text.TextRecognition
+import androidx.lifecycle.ViewModelProvider
 import com.serjthedoctor.billmanager.databinding.ActivityReceiptScannerBinding
 import com.serjthedoctor.billmanager.lib.ImageAnalyzer
-import kotlinx.android.synthetic.main.activity_receipt_scanner.*
-import java.nio.ByteBuffer
+import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,11 +28,14 @@ class ReceiptScannerActivity : AppCompatActivity() {
     private lateinit var binding: ActivityReceiptScannerBinding
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var model: BillsModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityReceiptScannerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        model = ViewModelProvider(this).get(BillsModel::class.java)
 
         // Request camera permissions
         if (allPermissionsGranted()) {
@@ -67,7 +67,7 @@ class ReceiptScannerActivity : AppCompatActivity() {
                 }
 
             // Image Capture
-            val imageCapture = ImageCapture.Builder().build()
+            imageCapture = ImageCapture.Builder().build()
 
             // Image Analyzer
             val imageAnalyzer = ImageAnalysis.Builder()
@@ -89,7 +89,11 @@ class ReceiptScannerActivity : AppCompatActivity() {
 
                 // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
-                        this, cameraSelector, imageCapture, preview, imageAnalyzer
+                    this,
+                    cameraSelector,
+                    imageCapture,
+                    preview,
+                    // imageAnalyzer
                 )
 
             } catch(e: Exception) {
@@ -119,6 +123,9 @@ class ReceiptScannerActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val url = Uri.fromFile(photoFile)
+
+                    model.uploadReceiptImage(photoFile)
+
                     val msg = "Photo was successfully captured: $url"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
@@ -165,7 +172,7 @@ class ReceiptScannerActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val TAG = "CameraXBasic"
+        const val TAG = "ReceiptScannerActivity"
         const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)

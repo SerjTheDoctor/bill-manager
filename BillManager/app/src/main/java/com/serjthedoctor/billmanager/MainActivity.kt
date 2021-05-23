@@ -21,7 +21,7 @@ private const val IMAGE_FROM_GALLERY = 2
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var model: BillsModel;
+    private lateinit var model: BillsModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,11 +60,6 @@ class MainActivity : AppCompatActivity() {
         fileStream.close()
         Log.d(TAG, "Wrote $bytes bytes to file ${file.absolutePath}")
 
-        // val rotatedBitmap = createRotatedBitmap(file)
-        // fileStream = file.outputStream()
-        // rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fileStream)
-        // fileStream.close()
-
         model.uploadReceiptImage(file)
     }
 
@@ -73,29 +68,4 @@ class MainActivity : AppCompatActivity() {
         const val JPG_FILE_SUFFIX = ".jpeg"
         const val RECEIPT_IMAGE_PREFIX = "phone-"
     }
-
-    // Rotation code
-    // private fun createRotatedBitmap(file: File): Bitmap {
-    //     val bitmap = BitmapFactory.decodeFile(file.path)
-    //     val orientation: Int = ExifInterface(file.path).getAttributeInt(
-    //         ExifInterface.TAG_ORIENTATION,
-    //         ExifInterface.ORIENTATION_UNDEFINED
-    //     )
-    //
-    //     return when (orientation) {
-    //         ExifInterface.ORIENTATION_ROTATE_90 -> rotateImage(bitmap, 90f)
-    //         ExifInterface.ORIENTATION_ROTATE_180 -> rotateImage(bitmap, 180f)
-    //         ExifInterface.ORIENTATION_ROTATE_270 -> rotateImage(bitmap, 270f)
-    //         ExifInterface.ORIENTATION_NORMAL -> bitmap
-    //         else -> bitmap
-    //     }
-    // }
-    //
-    // private fun rotateImage(source: Bitmap, angle: Float): Bitmap {
-    //     val matrix = Matrix()
-    //     matrix.postRotate(angle)
-    //
-    //     return Bitmap.createBitmap(source, 0, 0, source.width, source.height,
-    //             matrix, false)
-    // }
 }

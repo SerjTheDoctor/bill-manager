@@ -1,4 +1,5 @@
 import pytesseract
+import re
 
 columns_map = {
     'level': 'level',
@@ -57,6 +58,18 @@ class TextManager:
         return count, len(words)
 
     @staticmethod
-    def search_pattern(text, pattern):
-        # re.match(pattern, text) ?
-        pass
+    def extract_date(data):
+        texts = [obj["text"] for obj in data]
+
+        print(texts)
+
+        for text in texts:
+            if len(text) < 5 or len(text) > 15:
+                continue
+
+            possible_date = re.search('^.?.-.?.-....', text)
+
+            if possible_date:
+                return possible_date.string
+
+        return None
