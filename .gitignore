@@ -89,3 +89,9 @@ lint/tmp/
 
 # Virtual Env Python
 venv/
+
+# Uploaded files
+FlaskServer/uploads/
+
+# Cache
+**/__pycache__/*

@@ -1,5 +1,7 @@
 import pytesseract
 import re
+from datetime import datetime
+from lib.logger import print_list
 
 columns_map = {
     'level': 'level',
@@ -16,7 +18,19 @@ columns_map = {
     'text': 'text',
 }
 
+
 class TextManager:
+    @staticmethod
+    def recognize(image, params):
+        pprint('Extracting data')
+        all_data = TextManager.extract_data(image)
+
+        date = TextManager.extract_date(all_data)
+
+        return {
+            'date': date,
+        }, all_data
+
     @staticmethod
     def extract_text(image, language='ron+eng'):
         text = pytesseract.image_to_string(image, lang=language)
@@ -44,6 +58,8 @@ class TextManager:
 
             vertical_data.append(object_details)
 
+        print_list([d['text'] for d in vertical_data])
+
         return vertical_data
 
     @staticmethod
@@ -61,15 +77,18 @@ class TextManager:
     def extract_date(data):
         texts = [obj["text"] for obj in data]
 
-        print(texts)
-
         for text in texts:
             if len(text) < 5 or len(text) > 15:
                 continue
 
-            possible_date = re.search('^.?.-.?.-....', text)
+            # 12-10-2021 and other delimiters
+            possible_date = re.search('.?.[-.,|/].?.[-.,|/][12][0-9]{3}', text)
 
             if possible_date:
-                return possible_date.string
-
+                return possible_date[0]
         return None
+
+
+def pprint(message):
+    now = datetime.now().strftime('%H:%M:%S.%f')
+    print(str(now) + ' [TextManager] ' + str(message))

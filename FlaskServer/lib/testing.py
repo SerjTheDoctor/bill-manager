@@ -1,26 +1,15 @@
 import cv2
 import pytesseract
 import random
+import imutils
+import os
 import numpy as np
 from texttable import Texttable
 from skimage.filters import threshold_local
-from ImageManager import ImageManager
-from TextManager import TextManager
-import imutils
-
-def print_data_table(data):
-    used_keys = ['text', 'block', 'par', 'line', 'word', 'conf']
-    used_data = [{key: obj[key] for key in used_keys} for obj in data]
+from lib.image_manager import ImageManager
+from lib.text_manager import TextManager
 
 
-    rows = [list(value.values()) for value in used_data]
-
-    table = Texttable()
-    table.set_max_width(0)
-    table.header(used_keys)
-    table.add_rows(rows, header=False)
-
-    print(table.draw())
 
 def order_points(pts):
     # initialize a list of coordinates that will be ordered
@@ -151,8 +140,7 @@ def fix_outside_edge(image):
 
 
 def apply_edge_detection(image):
-    # convert the image to grayscale, blur it, and find edges
-    # in the image
+    # convert the image to grayscale, blur it, and find edges in the image
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -216,8 +204,8 @@ def process_edges(edged_image, orig_image):
     # cv2.drawContours(orig_image, screen_cnts, -1, (200, 255, 200), 1)
     cv2.imshow("Outline", imutils.resize(orig_image, height=1000))
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     return screen_cnt
 
@@ -234,11 +222,11 @@ def de_skew_image(image, contour, orig_ratio):
 
     # show the original and scanned images
     print("STEP 3: Apply perspective transform")
-    cv2.imshow("Original", imutils.resize(image, height=650))
-    cv2.imshow("Scanned", imutils.resize(warped, height=650))
+    # cv2.imshow("Original", imutils.resize(image, height=650))
+    # cv2.imshow("Scanned", imutils.resize(warped, height=650))
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     return warped
 
@@ -261,13 +249,24 @@ def testing_image_processing(path='../receipts/3.jpg'):
 
     data = TextManager.extract_data(processed_image)
 
-    print_data_table(data)
+    # print_data_table(data)
 
     img = ImageManager.augment_image(processed_image, data)
     cv2.imshow('Receipt Viewer', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-testing_image_processing()
+
+def run_all():
+    for filename in os.listdir("../uploads/"):
+        print("Trying to process " + str(filename))
+        filepath = '../uploads/' + filename
+        testing_image_processing(filepath)
+        print("Finished processing " + str(filename))
+
+    print("Finished")
+
+
+testing_image_processing('../uploads/InternationalPaper-1.jpeg')
 # for i in [1000 + i for i in range(10)]:
 #     testing_image_processing('../receipts/dataset-SRD/' + str(i) + '-receipt.jpg')

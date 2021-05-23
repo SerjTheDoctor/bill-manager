@@ -1,19 +1,17 @@
 from flask import Flask, request
 from werkzeug.utils import secure_filename
 from lib.script import get_date
+from lib.receipt_cpu import process
 
 app = Flask(__name__)
 
-
 @app.route("/")
 def main():
-    return "Server check"
+    return "Server is up!"
 
 
 @app.route("/receipts", methods=["POST"])
 def upload_receipt():
-    print('Request:')
-    print(request)
     if "image" not in request.files:
         return "No image attached"
 
@@ -24,7 +22,8 @@ def upload_receipt():
     path = "uploads/" + secure_filename(image.filename)
     image.save(path)
 
-    extracted_date = get_date(path)
+    data = process(path)
+    extracted_date = data['date']
 
     print("Received file " + path)
 
