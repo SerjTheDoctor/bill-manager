@@ -2,8 +2,10 @@ import cv2
 import random
 import imutils
 import numpy as np
+from typing import List
 from skimage.filters import threshold_local
 from datetime import datetime
+from model.extracted_object import ExtractedObject
 
 # Maybe remove class and leave only methods
 class ImageManager:
@@ -265,17 +267,14 @@ class ImageManager:
         return rect
 
     @staticmethod
-    def augment_image(image, data, scale=1):
+    def augment_image(image, data: List[ExtractedObject], scale=1):
         pad = 1
         colors = {}
 
         for obj in data:
-            for k in ['left', 'top', 'width', 'height']:
-                obj[k] = int(obj[k] * scale)
-
-            start = (obj['left'] - pad, obj['top'] - pad)
-            end = (obj['left'] + obj['width'] + pad, obj['top'] + obj['height'] + pad)
-            block = str(obj['block'])
+            start = (obj.left * scale - pad, obj.top * scale - pad)
+            end = (obj.right * scale + pad, obj.bottom * scale + pad)
+            block = str(obj.block)
 
             if block not in colors:
                 # TODO: maybe change to some standard colors

@@ -4,6 +4,7 @@
       <w>imshow</w>
       <w>imutils</w>
       <w>strftime</w>
+      <w>tesseract</w>
       <w>thresholding</w>
       <w>uint</w>
     </words>

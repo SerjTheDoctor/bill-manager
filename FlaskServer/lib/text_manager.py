@@ -1,7 +1,9 @@
 import pytesseract
 import re
+from typing import List
 from datetime import datetime
 from lib.logger import print_list
+from model.extracted_object import ExtractedObject
 
 columns_map = {
     'level': 'level',
@@ -22,8 +24,14 @@ columns_map = {
 class TextManager:
     @staticmethod
     def recognize(image, params):
+        ocr = params.get('ocr', 'tesseract')
+
         pprint('Extracting data')
-        all_data = TextManager.extract_data(image)
+
+        if ocr == 'tesseract':
+            all_data = TextManager.extract_tesseract(image)
+        else:
+            all_data = TextManager.extract_tesseract(image)
 
         date = TextManager.extract_date(all_data)
 
@@ -38,7 +46,7 @@ class TextManager:
         return text.strip()
 
     @staticmethod
-    def extract_data(image, language='ron+eng'):
+    def extract_tesseract(image, language='ron+eng') -> List[ExtractedObject]:
         data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
 
         if len(data) == 0:
@@ -48,17 +56,19 @@ class TextManager:
         data_keys = list(data.keys())
 
         for i in range(len(data[data_keys[0]])):
-            object_details = {}
-
             if data['text'][i].strip() == '':
                 continue
 
+            object_details = {}
+
             for k in data_keys:
-                object_details[columns_map[k]] = data[k][i]
+                object_details[k] = data[k][i]
 
-            vertical_data.append(object_details)
+            extracted_object = ExtractedObject.from_tesseract(object_details)
 
-        print_list([d['text'] for d in vertical_data])
+            vertical_data.append(extracted_object)
+
+        print_list([obj.text for obj in vertical_data])
 
         return vertical_data
 
@@ -75,7 +85,7 @@ class TextManager:
 
     @staticmethod
     def extract_date(data):
-        texts = [obj["text"] for obj in data]
+        texts = [obj.text for obj in data]
 
         for text in texts:
             if len(text) < 5 or len(text) > 15:
