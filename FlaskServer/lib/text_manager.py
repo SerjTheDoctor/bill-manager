@@ -5,6 +5,8 @@ from datetime import datetime
 from lib.utils import print_list
 from lib.image_helper import image2bytes
 from model.extracted_object import ExtractedObject
+from texttable import Texttable
+from google.cloud import vision
 
 columns_map = {
     'level': 'level',
@@ -32,7 +34,7 @@ class TextManager:
         if ocr == 'tesseract':
             all_data = TextManager.extract_tesseract(image)
         else:
-            all_data = TextManager.extract_tesseract(image)
+            all_data = TextManager.extract_google_vision(image, image_ext)
 
         date = TextManager.extract_date(all_data)
         d1, d2 = TextManager.split_by_regions(all_data, image.shape)
@@ -46,10 +48,27 @@ class TextManager:
         }, all_data
 
     @staticmethod
-    def extract_text(image, language='ron+eng'):
-        text = pytesseract.image_to_string(image, lang=language)
+    def extract_google_vision(image, image_extension) -> List[ExtractedObject]:
+        client = vision.ImageAnnotatorClient()
 
-        return text.strip()
+        bytes_image = image2bytes(image, image_extension)
+        vision_image = vision.Image(content=bytes_image)
+
+        response = client.text_detection(image=vision_image)
+        data = []
+
+        for i, element in enumerate(response.text_annotations):
+            if i == 0:
+                # first one contains all the document
+                continue
+
+            if element.description.strip() == '':
+                continue
+
+            extracted_object = ExtractedObject.from_google_vision(element, i)
+            data.append(extracted_object)
+
+        return data
 
     @staticmethod
     def extract_tesseract(image, language='ron+eng') -> List[ExtractedObject]:
