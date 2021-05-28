@@ -1,6 +1,5 @@
 from flask import Flask, request
 from werkzeug.utils import secure_filename
-from lib.script import get_date
 from lib.receipt_cpu import process
 
 app = Flask(__name__)

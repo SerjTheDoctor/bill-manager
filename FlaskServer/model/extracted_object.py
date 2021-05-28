@@ -31,12 +31,27 @@ class ExtractedObject:
     def bottom(self):
         return self.start[1] + self.height
 
+    def expand_with(self, other):
+        if not isinstance(other, ExtractedObject):
+            raise TypeError('other should be an ExtractedObject')
+
+        left = min(self.left, other.left)
+        top = min(self.top, other.top)
+        self.start = (left, top)
+
+        right = max(self.right, other.right)
+        bottom = max(self.bottom, other.bottom)
+        self.height = bottom - top
+        self.width = right - left
+
+        self.text += ' ' + other.text
+
     @staticmethod
     def from_tesseract(data):
         start = (data['left'], data['top'])
         height = data['height']
         width = data['width']
-        text = data['text']
+        text = str(data['text']).upper()
         block = data['block_num']
         par = data['par_num']
         line = data['line_num']

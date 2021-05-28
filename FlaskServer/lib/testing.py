@@ -3,13 +3,47 @@ import pytesseract
 import random
 import imutils
 import os
+import io
 import numpy as np
 from texttable import Texttable
 from skimage.filters import threshold_local
 from lib.image_manager import ImageManager
 from lib.text_manager import TextManager
+from lib.receipt_cpu import process
+from google.cloud import vision
 
 
+
+# process('../uploads/auchan-2.jpg')
+
+def detect_text(path):
+    """Detects text in the file."""
+    client = vision.ImageAnnotatorClient()
+
+    with io.open(path, 'rb') as image_file:
+        content = image_file.read()
+
+    img = vision.Image(content=content)
+
+    response = client.text_detection(image=img)
+    texts = response.text_annotations
+    print('Texts:')
+
+    for text in texts:
+        print('\n"{}"'.format(text.description))
+
+        vertices = (['({},{})'.format(vertex.x, vertex.y)
+                    for vertex in text.bounding_poly.vertices])
+
+        print('bounds: {}'.format(','.join(vertices)))
+
+    if response.error.message:
+        raise Exception(
+            '{}\nFor more info on error messages, check: '
+            'https://cloud.google.com/apis/design/errors'.format(
+                response.error.message))
+
+detect_text('../uploads/auchan-2.jpg')
 
 def order_points(pts):
     # initialize a list of coordinates that will be ordered
@@ -74,11 +108,11 @@ def four_point_transform(image, pts):
 
 def testing_extract_text(path='../receipts/1.jpg'):
     img = ImageManager.open_image(path)
-    img = ImageManager.apply_brightness_contrast(img)
+    img = ImageManager.apply_contrast_and_brightness(img)
 
-    data = TextManager.extract_data(img)
+    data = TextManager.extract_tesseract(img)
 
-    print_data_table(data)
+    # print_data_table(data)
 
     img = ImageManager.augment_image(img, data)
     cv2.imshow('Receipt Viewer', img)
@@ -247,7 +281,7 @@ def testing_image_processing(path='../receipts/3.jpg'):
     processed_image = de_skew_image(orig, contour, ratio)
     # processed_image = imutils.resize(processed_image, height=600)
 
-    data = TextManager.extract_data(processed_image)
+    data = TextManager.extract_tesseract(processed_image)
 
     # print_data_table(data)
 
@@ -267,6 +301,6 @@ def run_all():
     print("Finished")
 
 
-testing_image_processing('../uploads/InternationalPaper-1.jpeg')
+# testing_image_processing('../uploads/InternationalPaper-1.jpeg')
 # for i in [1000 + i for i in range(10)]:
 #     testing_image_processing('../receipts/dataset-SRD/' + str(i) + '-receipt.jpg')

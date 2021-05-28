@@ -10,18 +10,16 @@ from model.extracted_object import ExtractedObject
 # Maybe remove class and leave only methods
 class ImageManager:
     @staticmethod
-    def process(path, params):
-        image = ImageManager.open_image(path)
+    def process(path, params={}):
+        if isinstance(path, str):
+            image = ImageManager.open_image(path)
+        else:
+            image = path
+
         original_image = image.copy()
         image_ratio = image.shape[0] / 500.0
-
         image = imutils.resize(image, height=500)
 
-        # image = ImageManager.apply_contrast_and_brightness(
-        #     image,
-        #     alpha=params.get('contrast', 1),
-        #     beta=params.get('brightness', 60)
-        # )
         edges_image = ImageManager.detect_edges(
             image,
             gaussian_kernel_size=params.get('gaussian_kernel_size', (5, 5)),
@@ -32,6 +30,7 @@ class ImageManager:
         receipt_polygon, all_contours = ImageManager.find_receipt_contour(edges_image)
 
         if params.get('show_progress_images', True):
+            pass
             # ImageManager.draw_contours(image, all_contours, color='all_random', thickness=1)
             ImageManager.draw_contours(image, [receipt_polygon])
 
@@ -93,9 +92,9 @@ class ImageManager:
         # auto_edged = imutils.auto_canny(gray)
 
         if visuals:
-            pprint('Displaying current images')
+            # pprint('Displaying current images')
             cv2.imshow("Image", image)
-            cv2.imshow("Grayed", gray)
+            # cv2.imshow("Grayed", gray)
             cv2.imshow("Edged", edged)
 
             # cv2.waitKey(0)
@@ -118,7 +117,7 @@ class ImageManager:
         # Sorting by the largest polygon
         contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
 
-        pprint('Trying to find receipt contour')
+        # pprint('Trying to find receipt contour')
         receipt_contour = None
         approx_contours = []
 
@@ -182,7 +181,7 @@ class ImageManager:
     ):
         # apply the four point transform to obtain a top-down
         # view of the original image
-        pprint('Applying four point transformation')
+        pprint('Applying four point transformation and thresholding')
         image = ImageManager.four_point_transform(original_image, contour.reshape(4, 2) * original_image_ratio)
 
         # convert the warped image to grayscale, then threshold it
@@ -190,15 +189,15 @@ class ImageManager:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # https://scikit-image.org/docs/stable/api/skimage.filters.html#skimage.filters.threshold_local
-        pprint('Thresholding image')
+        # pprint('Thresholding image')
         threshed = threshold_local(image, binary_bsize, offset=binary_offset, method=binary_method)
         image = (image > threshed).astype("uint8") * 255
 
         if visuals:
             # show the original and scanned images
             # cv2.imshow("Original", imutils.resize(original_image, height=650))
-            cv2.imshow("De skewed", imutils.resize(image, height=650))
-
+            # cv2.imshow("De skewed", imutils.resize(image, height=650))
+            pass
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
 
@@ -267,9 +266,9 @@ class ImageManager:
         return rect
 
     @staticmethod
-    def augment_image(image, data: List[ExtractedObject], scale=1):
-        pad = 1
+    def augment_image(image, data: List[ExtractedObject], scale=1, pad=1):
         colors = {}
+        colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
         for obj in data:
             start = (obj.left * scale - pad, obj.top * scale - pad)
@@ -283,10 +282,24 @@ class ImageManager:
                 b = random.randrange(257)
                 colors[block] = (r, g, b)
 
-            # image = cv2.rectangle(image, start, end, colors[block], 1)
-            image = cv2.rectangle(image, start, end, (0, 0, 0), 1)
+            colored_image = cv2.rectangle(colored_image, start, end, colors[block], 2)
 
-        return image
+            text_origin = (start[0], start[1] - 5)
+            # text = '{}-{}-{}-{}'.format(obj.block, obj.par, obj.line, obj.word)
+            colored_image = cv2.putText(colored_image, str(obj), text_origin, cv2.FONT_HERSHEY_PLAIN, 0.7, colors[block])
+            # image = cv2.rectangle(image, start, end, (0, 0, 0), 1)
+
+        return colored_image
+
+    @staticmethod
+    def draw_delimiter(image, del_y, color=(255, 0, 0)):
+        start = (10, int(del_y))
+        end = (image.shape[1] - 10, int(del_y))
+
+        image = cv2.putText(image, str(start[1]), (end[0], start[1]-3), cv2.FONT_HERSHEY_PLAIN, 1, color)
+
+        return cv2.line(image, start, end, color, 2)
+
 
 def pprint(message):
     now = datetime.now().strftime('%H:%M:%S.%f')
