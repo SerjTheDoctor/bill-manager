@@ -61,20 +61,16 @@ class ExtractedObject:
         return ExtractedObject(start, height, width, text, block, par, line, word, confidence)
 
     @staticmethod
-    def from_google_vision(data, index):
+    def from_google_vision(data, block=-1, par=-1, line=-1, word=-1):
         # vertices = [(l, t), (r, t), (r, b), (l, b)]
-        vertices = data.bounding_poly.vertices
+        vertices = data.bounding_box.vertices
 
         start = (vertices[0].x, vertices[0].y)
         height = vertices[3].y - vertices[0].y
         width = vertices[1].x - vertices[0].x
-        text = str(data.description)
+        confidence = data.confidence
 
-        block = index
-        par = 1
-        line = 1
-        word = 1
-        confidence = None
+        text = ''.join([s.text for s in data.symbols])
 
         return ExtractedObject(start, height, width, text, block, par, line, word, confidence)
 
@@ -85,3 +81,4 @@ class ExtractedObject:
 
     def __str__(self):
         return '{} ({}-{}-{}-{})'.format(self.text, self.block, self.par, self.line, self.word)
+        # return '{}-{}-{}'.format(self.block, self.line, self.word)

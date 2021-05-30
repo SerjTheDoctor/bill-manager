@@ -2,15 +2,16 @@ import cv2
 import random
 import imutils
 import numpy as np
-from typing import List
 from skimage.filters import threshold_local
 from datetime import datetime
-from model.extracted_object import ExtractedObject
 
 # Maybe remove class and leave only methods
 class ImageManager:
     @staticmethod
-    def process(path, params={}):
+    def process(path, params=None):
+        if params is None:
+            params = {}
+
         if isinstance(path, str):
             image = ImageManager.open_image(path)
         else:
@@ -145,7 +146,8 @@ class ImageManager:
     @staticmethod
     def draw_contours(image, contours, color=(0, 255, 0), thickness=2):
         # show the contour (outline) of the piece of paper
-        pprint('Drawing {} contours'.format(len(contours)))
+        nr = len(contours)
+        pprint('Drawing {} contour{}'.format(nr, 's' if nr != 1 else ''))
 
         if len(color) == 3:
             cv2.drawContours(image, contours, -1, color, thickness)
@@ -211,17 +213,17 @@ class ImageManager:
 
         # compute the width of the new image, which will be the
         # maximum distance between bottom-right and bottom-left
-        # x-coordiates or the top-right and top-left x-coordinates
-        widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        maxWidth = max(int(widthA), int(widthB))
+        # x-coordinates or the top-right and top-left x-coordinates
+        width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        max_width = max(int(width_a), int(width_b))
 
         # compute the height of the new image, which will be the
         # maximum distance between the top-right and bottom-right
         # y-coordinates or the top-left and bottom-left y-coordinates
-        heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-        maxHeight = max(int(heightA), int(heightB))
+        height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        max_height = max(int(height_a), int(height_b))
 
         # now that we have the dimensions of the new image, construct
         # the set of destination points to obtain a "birds eye view",
@@ -230,13 +232,13 @@ class ImageManager:
         # order
         dst = np.array([
             [0, 0],
-            [maxWidth - 1, 0],
-            [maxWidth - 1, maxHeight - 1],
-            [0, maxHeight - 1]], dtype="float32")
+            [max_width - 1, 0],
+            [max_width - 1, max_height - 1],
+            [0, max_height - 1]], dtype="float32")
 
         # compute the perspective transform matrix and then apply it
         matrix = cv2.getPerspectiveTransform(rect, dst)
-        warped = cv2.warpPerspective(image, matrix, (maxWidth, maxHeight))
+        warped = cv2.warpPerspective(image, matrix, (max_width, max_height))
 
         # return the warped image
         return warped
@@ -264,42 +266,6 @@ class ImageManager:
 
         # return the ordered coordinates
         return rect
-
-    @staticmethod
-    def augment_image(image, data: List[ExtractedObject], scale=1, pad=1):
-        colors = {}
-        colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-
-        for obj in data:
-            start = (obj.left * scale - pad, obj.top * scale - pad)
-            end = (obj.right * scale + pad, obj.bottom * scale + pad)
-            block = str(obj.block)
-
-            if block not in colors:
-                # TODO: maybe change to some standard colors
-                r = random.randrange(257)
-                g = random.randrange(257)
-                b = random.randrange(257)
-                colors[block] = (r, g, b)
-
-            colored_image = cv2.rectangle(colored_image, start, end, colors[block], 2)
-
-            text_origin = (start[0], start[1] - 5)
-            # text = '{}-{}-{}-{}'.format(obj.block, obj.par, obj.line, obj.word)
-            colored_image = cv2.putText(colored_image, str(obj), text_origin, cv2.FONT_HERSHEY_PLAIN, 0.7, colors[block])
-            # image = cv2.rectangle(image, start, end, (0, 0, 0), 1)
-
-        return colored_image
-
-    @staticmethod
-    def draw_delimiter(image, del_y, color=(255, 0, 0)):
-        start = (10, int(del_y))
-        end = (image.shape[1] - 10, int(del_y))
-
-        image = cv2.putText(image, str(start[1]), (end[0], start[1]-3), cv2.FONT_HERSHEY_PLAIN, 1, color)
-
-        return cv2.line(image, start, end, color, 2)
-
 
 def pprint(message):
     now = datetime.now().strftime('%H:%M:%S.%f')

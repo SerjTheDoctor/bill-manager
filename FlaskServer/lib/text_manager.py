@@ -1,28 +1,13 @@
 import pytesseract
 import re
-from typing import List
+from typing import List, Optional
 from datetime import datetime
-from lib.utils import print_list
+from lib.utils import pretty_list
 from lib.image_helper import image2bytes
-from model.extracted_object import ExtractedObject
+from model import ExtractedTree, Node, NodeType
+from model import ExtractedObject
 from texttable import Texttable
 from google.cloud import vision
-
-columns_map = {
-    'level': 'level',
-    'page_num': 'page',
-    'block_num': 'block',
-    'par_num': 'par',
-    'line_num': 'line',
-    'word_num': 'word',
-    'left': 'left',
-    'top': 'top',
-    'width': 'width',
-    'height': 'height',
-    'conf': 'conf',
-    'text': 'text',
-}
-
 
 class TextManager:
     @staticmethod
@@ -32,43 +17,54 @@ class TextManager:
         pprint('Extracting data')
 
         if ocr == 'tesseract':
-            all_data = TextManager.extract_tesseract(image)
+            data = TextManager.extract_tesseract(image)
         else:
-            all_data = TextManager.extract_google_vision(image, image_ext)
+            data = TextManager.extract_google_vision(image, image_ext)
 
-        date = TextManager.extract_date(all_data)
-        d1, d2 = TextManager.split_by_regions(all_data, image.shape)
+        date = TextManager.extract_date(data)
+        total = TextManager.extract_total(data, image.shape)
+        store = TextManager.extract_store(data)
 
-        store = TextManager.extract_store(all_data)
+        d1, d2 = TextManager.split_by_regions(data, image.shape)
 
         return {
             'date': date,
+            'total': total,
             'store': store,
             'delimiters': [d1, d2]
-        }, all_data
+        }, data
 
     @staticmethod
-    def extract_google_vision(image, image_extension) -> List[ExtractedObject]:
+    def extract_google_vision(image, image_extension) -> ExtractedTree:
         client = vision.ImageAnnotatorClient()
 
         bytes_image = image2bytes(image, image_extension)
         vision_image = vision.Image(content=bytes_image)
 
-        response = client.text_detection(image=vision_image)
         data = []
+        response = client.document_text_detection(image=vision_image)
+        blocks = response.full_text_annotation.pages[0].blocks
 
-        for i, element in enumerate(response.text_annotations):
-            if i == 0:
-                # first one contains all the document
-                continue
+        for block_i, block in enumerate(blocks):
+            for par_i, par in enumerate(block.paragraphs):
+                for word_i, word in enumerate(par.words):
+                    extracted_object = ExtractedObject.from_google_vision(word, block_i, par_i, -1, word_i)
+                    data.append(extracted_object)
 
-            if element.description.strip() == '':
-                continue
+        # Sort by middle line of the word
+        # This could help with ordering the lines, but breaks the order of the words
+        # Disable it for now and we might enable it when we also order by words
+        # data.sort(key=lambda d: int(d.top+d.height/2))
 
-            extracted_object = ExtractedObject.from_google_vision(element, i)
-            data.append(extracted_object)
+        tree_data = ExtractedTree()
+        for d in data:
+            node = Node(NodeType.WORD, d.text, d.start, d.end)
+            tree_data.add_node(node)
 
-        return data
+        # Debug
+        # TextManager.print_data_tree_table(tree_data, NodeType.LINE)
+
+        return tree_data
 
     @staticmethod
     def extract_tesseract(image, language='ron+eng') -> List[ExtractedObject]:
@@ -90,7 +86,6 @@ class TextManager:
                 object_details[k] = data[k][i]
 
             extracted_object = ExtractedObject.from_tesseract(object_details)
-
             vertical_data.append(extracted_object)
 
         vertical_data = TextManager.reindex_blocks(vertical_data)
@@ -98,7 +93,7 @@ class TextManager:
 
         # DEBUG
         # TextManager.print_data_table(vertical_data)
-        print_list(vertical_data)
+        # pprint(pretty_list(vertical_data))
 
         return vertical_data
 
@@ -118,8 +113,14 @@ class TextManager:
         return data
 
     @staticmethod
-    def print_data_table(data: List[ExtractedObject]):
-        used_keys = ['text', 'block', 'par', 'line', 'word', 'confidence']
+    def print_data_tree_table(data_tree: ExtractedTree, node_type):
+        used_keys = ['text', 'top', 'bottom', 'height', 'left', 'right', 'width', 'parent']
+
+        if node_type == NodeType.WORD:
+            data = data_tree.get_words()
+        else:
+            data = data_tree.get_lines()
+
         used_data = [{key: obj.__getattribute__(key) for key in used_keys} for obj in data]
 
         rows = [list(value.values()) for value in used_data]
@@ -132,19 +133,22 @@ class TextManager:
         print(table.draw())
 
     @staticmethod
-    def compute_fitness(text, words):
-        # Counts the number of found words from the given set in the text
-        count = 0
+    def print_data_table(data: List[ExtractedObject]):
+        used_keys = ['text', 'block', 'par', 'line', 'word', 'confidence', 'top', 'bottom', 'height', 'middle_line']
+        used_data = [{key: obj.__getattribute__(key) for key in used_keys} for obj in data]
 
-        for word in words:
-            if text.find(word) != -1:
-                count += 1
+        rows = [list(value.values()) for value in used_data]
 
-        return count, len(words)
+        table = Texttable()
+        table.set_max_width(0)
+        table.header(used_keys)
+        table.add_rows(rows, header=False)
+
+        print(table.draw())
 
     @staticmethod
-    def extract_date(data: List[ExtractedObject]):
-        texts = [obj.text for obj in data]
+    def extract_date(data: ExtractedTree):
+        texts = [obj.text for obj in data.get_words()]
 
         for text in texts:
             if len(text) < 5 or len(text) > 15:
@@ -158,7 +162,19 @@ class TextManager:
         return None
 
     @staticmethod
-    def split_by_regions(data: List[ExtractedObject], image_shape):
+    def extract_total(data: ExtractedTree, image_shape):
+        total_node = TextManager.search_total(data, image_shape[1])
+        total_line = total_node.parent
+
+        possible_total = re.search('[0-9]+[.,][0-9]{2}', total_line.text)
+
+        if possible_total:
+            return possible_total[0]
+
+        return None
+
+    @staticmethod
+    def split_by_regions(data: ExtractedTree, image_shape):
         height, width = image_shape
 
         cif = TextManager.search_cif(data)
@@ -179,14 +195,14 @@ class TextManager:
         return cif_delimiter, total_delimiter
 
     @staticmethod
-    def search_cif(data: List[ExtractedObject]):
+    def search_cif(data: ExtractedTree):
         # C.I.F. and small errors
         # Cod Identificare Fiscala
-        for d in data:
+        for d in data.get_words():
             if re.search('[C08][.]?[I1][.]?[FP]', d.text):
                 return d
 
-        lines_data = TextManager.get_lines(data)
+        lines_data = data.get_lines()
 
         for la in lines_data:
             if re.search('COD', la.text) and \
@@ -201,10 +217,10 @@ class TextManager:
         return None
 
     @staticmethod
-    def search_total(data: List[ExtractedObject], image_width):
+    def search_total(data: ExtractedTree, image_width):
         totals_found = []
 
-        for d in data:
+        for d in data.get_words():
             if re.search('TOTAL', d.text) and not re.search('SUBTOTAL', d.text):
                 totals_found.append(d)
 
@@ -220,6 +236,7 @@ class TextManager:
 
         return None
 
+    # SHOULD BE REMOVED
     @staticmethod
     def get_lines(data: List[ExtractedObject]):
         def key(eo: ExtractedObject):
@@ -240,9 +257,19 @@ class TextManager:
         return list(lines.values())
 
     @staticmethod
-    def extract_store(data):
-        return None
+    def extract_store(data: ExtractedTree):
+        # Not confirmed from a legitimate source, but most of the time
+        # the store is located on the first line in the document
+        first_line = data.get_lines()[0]
+        store = first_line.text
 
+        store = re.sub('^S[.]?C[.]? ', '', store)       # Exclude S.C.
+        store = re.sub(' S[.]?A[.]?$', '', store)       # Exclude S.A.
+        store = re.sub(' S[.]?R[.]?L[.]?$', '', store)  # Exclude S.R.L.
+        store = re.sub('[^a-zA-Z ]', '', store)         # Exclude non-alpha characters
+        store = re.sub(' {2,}', ' ', store)             # Remove multiple spaces
+
+        return store.strip()
 
 def pprint(message):
     now = datetime.now().strftime('%H:%M:%S.%f')
