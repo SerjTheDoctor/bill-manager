@@ -3,7 +3,8 @@ import re
 from typing import List, Optional
 from datetime import datetime
 from lib.utils import pretty_list
-from lib.image_helper import image2bytes
+from lib.image_helper import image2bytes, show_quick_augmented_image, draw_y_delimiter
+from lib.item_recognizer import extract_items, split_by_regions, search_total
 from model import ExtractedTree, Node, NodeType
 from model import ExtractedObject
 from texttable import Texttable
@@ -11,26 +12,32 @@ from google.cloud import vision
 
 class TextManager:
     @staticmethod
-    def recognize(image, image_ext, params={}):
+    def recognize(image, image_ext, params=None):
+        if params is None:
+            params = {}
+
         ocr = params.get('ocr-engine', 'tesseract')
 
-        pprint('Extracting data')
+        pprint('Extracting data using {} engine'.format(ocr.capitalize()))
 
         if ocr == 'tesseract':
             data = TextManager.extract_tesseract(image)
         else:
             data = TextManager.extract_google_vision(image, image_ext)
 
-        date = TextManager.extract_date(data)
-        total = TextManager.extract_total(data, image.shape)
-        store = TextManager.extract_store(data)
+        date = TextManager.extract_date(data, image)
+        total = TextManager.extract_total(data, image.shape, image)
+        store = TextManager.extract_store(data, image)
 
-        d1, d2 = TextManager.split_by_regions(data, image.shape)
+        items = extract_items(data, image)
+
+        d1, d2 = split_by_regions(data, image.shape)
 
         return {
             'date': date,
             'total': total,
             'store': store,
+            'items': items,
             'delimiters': [d1, d2]
         }, data
 
@@ -60,6 +67,9 @@ class TextManager:
         for d in data:
             node = Node(NodeType.WORD, d.text, d.start, d.end)
             tree_data.add_node(node)
+
+            # Show the process of creating lines step by step
+            # show_quick_augmented_image(image, tree_data.get_lines())
 
         # Debug
         # TextManager.print_data_tree_table(tree_data, NodeType.LINE)
@@ -147,94 +157,54 @@ class TextManager:
         print(table.draw())
 
     @staticmethod
-    def extract_date(data: ExtractedTree):
+    def extract_date(data: ExtractedTree, image):
         texts = [obj.text for obj in data.get_words()]
+        words = data.get_words()
 
-        for text in texts:
-            if len(text) < 5 or len(text) > 15:
+        for word in words:
+            if len(word.text) < 5 or len(word.text) > 15:
                 continue
 
             # 12-10-2021 and other delimiters
-            possible_date = re.search('.?.[-.,|/].?.[-.,|/][12][0-9]{3}', text)
+            possible_date = re.search('.?.[-.,|/].?.[-.,|/][12][0-9]{3}', word.text)
 
             if possible_date:
+                # show_quick_augmented_image(image, [word])
                 return possible_date[0]
         return None
 
     @staticmethod
-    def extract_total(data: ExtractedTree, image_shape):
-        total_node = TextManager.search_total(data, image_shape[1])
+    def extract_total(data: ExtractedTree, image_shape, image):
+        total_node = search_total(data, image_shape[1])
+        if total_node is None:
+            return None
+
         total_line = total_node.parent
 
         possible_total = re.search('[0-9]+[.,][0-9]{2}', total_line.text)
 
         if possible_total:
+            # show_quick_augmented_image(image, [total_line])
             return possible_total[0]
 
         return None
 
     @staticmethod
-    def split_by_regions(data: ExtractedTree, image_shape):
-        height, width = image_shape
+    def extract_store(data: ExtractedTree, image):
+        # Not confirmed from a legitimate source, but most of the time
+        # the store is located on the first line in the document
+        first_line = data.get_lines()[0]
+        store = first_line.text
 
-        cif = TextManager.search_cif(data)
-        total = TextManager.search_total(data, width)
+        store = re.sub('^S[.]?C[.]? ', '', store)  # Exclude S.C.
+        store = re.sub(' S[.]?A[.]?$', '', store)  # Exclude S.A.
+        store = re.sub(' S[.]?R[.]?L[.]?$', '', store)  # Exclude S.R.L.
+        store = re.sub('[^a-zA-Z ]', '', store)  # Exclude non-alpha characters
+        store = re.sub(' {2,}', ' ', store)  # Remove multiple spaces
 
-        if cif:
-            cif_delimiter = cif.top + cif.height / 2
-        else:
-            cif_delimiter = None
-            pprint('Could not find CIF')
+        # show_quick_augmented_image(image, [first_line])
 
-        if total:
-            total_delimiter = total.top + total.height / 2
-        else:
-            total_delimiter = None
-            pprint('Could not find TOTAL')
-
-        return cif_delimiter, total_delimiter
-
-    @staticmethod
-    def search_cif(data: ExtractedTree):
-        # C.I.F. and small errors
-        # Cod Identificare Fiscala
-        for d in data.get_words():
-            if re.search('[C08][.]?[I1][.]?[FP]', d.text):
-                return d
-
-        lines_data = data.get_lines()
-
-        for la in lines_data:
-            if re.search('COD', la.text) and \
-                    re.search('IDENTIFICARE', la.text) and \
-                    re.search('FISCALA', la.text):
-                return la
-
-        for la in lines_data:
-            if re.search('[C08][.]?[ ]*[I1][.]?[ ]*[FP]', la.text):
-                return la
-
-        return None
-
-    @staticmethod
-    def search_total(data: ExtractedTree, image_width):
-        totals_found = []
-
-        for d in data.get_words():
-            if re.search('TOTAL', d.text) and not re.search('SUBTOTAL', d.text):
-                totals_found.append(d)
-
-        if image_width:
-            # Total is located on the left side of the image
-            half_width = image_width / 2
-            totals_found = [t for t in totals_found if t.left < half_width]
-
-        if len(totals_found) > 0:
-            # Sort totals in appearance order from top to bottom
-            totals_found.sort(key=lambda t: t.top)
-            return totals_found[0]
-
-        return None
+        return store.strip()
 
     # SHOULD BE REMOVED
     @staticmethod
@@ -256,20 +226,6 @@ class TextManager:
 
         return list(lines.values())
 
-    @staticmethod
-    def extract_store(data: ExtractedTree):
-        # Not confirmed from a legitimate source, but most of the time
-        # the store is located on the first line in the document
-        first_line = data.get_lines()[0]
-        store = first_line.text
-
-        store = re.sub('^S[.]?C[.]? ', '', store)       # Exclude S.C.
-        store = re.sub(' S[.]?A[.]?$', '', store)       # Exclude S.A.
-        store = re.sub(' S[.]?R[.]?L[.]?$', '', store)  # Exclude S.R.L.
-        store = re.sub('[^a-zA-Z ]', '', store)         # Exclude non-alpha characters
-        store = re.sub(' {2,}', ' ', store)             # Remove multiple spaces
-
-        return store.strip()
 
 def pprint(message):
     now = datetime.now().strftime('%H:%M:%S.%f')

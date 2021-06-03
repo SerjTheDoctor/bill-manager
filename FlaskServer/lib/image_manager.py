@@ -3,6 +3,7 @@ import random
 import imutils
 import numpy as np
 from skimage.filters import threshold_local
+from lib.image_helper import open_image
 from datetime import datetime
 
 # Maybe remove class and leave only methods
@@ -13,7 +14,7 @@ class ImageManager:
             params = {}
 
         if isinstance(path, str):
-            image = ImageManager.open_image(path)
+            image = open_image(path)
         else:
             image = path
 
@@ -31,7 +32,6 @@ class ImageManager:
         receipt_polygon, all_contours = ImageManager.find_receipt_contour(edges_image)
 
         if params.get('show_progress_images', True):
-            pass
             # ImageManager.draw_contours(image, all_contours, color='all_random', thickness=1)
             ImageManager.draw_contours(image, [receipt_polygon])
 
@@ -47,29 +47,6 @@ class ImageManager:
 
         return imutils.resize(receipt_centered_image, height=1000)
 
-
-    @staticmethod
-    def open_image(path):
-        # Reads image from path
-        image = cv2.imread(path)
-        # image = cv2.resize(image, (756, 1008))
-
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-        return image
-
-    @staticmethod
-    def show(image, title='Image', wait=True, only_destroy_this=True):
-        cv2.imshow(title, image)
-
-        if wait:
-            cv2.waitKey(0)  # waits until a key is pressed
-
-            if only_destroy_this:
-                cv2.destroyWindow(title)
-            else:
-                cv2.destroyAllWindows()
 
     @staticmethod
     def apply_contrast_and_brightness(image, alpha=1, beta=60):
@@ -96,7 +73,7 @@ class ImageManager:
             # pprint('Displaying current images')
             cv2.imshow("Image", image)
             # cv2.imshow("Grayed", gray)
-            cv2.imshow("Edged", edged)
+            # cv2.imshow("Edged", edged)
 
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()

@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 class NodeType(Enum):
     DOCUMENT = 0
@@ -11,11 +12,11 @@ class Node:
         self.text = text
         self.box_start = box_start
         self.box_end = box_end
-        self.children = []
+        self.children: List[Node] = []
         self.parent = parent
 
     def __str__(self):
-        return '{} ({})'.format(self.text, self.node_type.name)
+        return '{}'.format(self.text)
 
     @property
     def height(self):
@@ -41,13 +42,28 @@ class Node:
     def bottom(self):
         return self.box_end[1]
 
-    def add_children(self, node):
-        self.children.append(node)
+    @property
+    def middle(self):
+        return int((self.top + self.bottom)/2)
 
-        if self.text is None or self.text is '':
+    def add_children(self, node):
+        # If we add a word, we insert it so
+        # the horizontal order is preserved
+        if node.node_type == NodeType.WORD:
+            i = 0
+            while i < len(self.children):
+                if node.left < self.children[i].left:
+                    break
+                i += 1
+
+            self.children.insert(i, node)
+        else:
+            self.children.append(node)
+
+        if self.text is None or self.text == '':
             self.text = str(node.text).upper()
         else:
-            self.text += ' ' + str(node.text).upper()
+            self.text = ' '.join([str(child.text).upper() for child in self.children])
 
         if self.box_start is None:
             self.box_start = (node.left, node.top)

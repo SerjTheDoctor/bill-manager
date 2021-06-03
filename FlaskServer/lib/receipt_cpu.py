@@ -1,7 +1,7 @@
 from lib.image_manager import ImageManager
-from lib.image_helper import augment_image, draw_delimiter
+from lib.image_helper import show_image, augment_image, draw_y_delimiter, draw_x_delimiter
 from lib.text_manager import TextManager
-from lib.utils import get_extension, pretty_dict
+from lib.utils import get_extension, pretty_bill
 from datetime import datetime
 import cv2
 import os
@@ -27,7 +27,7 @@ def process(path, env='development'):
     }
     recognized_data, all_data = TextManager.recognize(image, get_extension(path), text_params)
 
-    pprint("Found: " + pretty_dict(recognized_data))
+    print(pretty_bill(recognized_data))
 
     # -- Augmented image -- #
 
@@ -37,13 +37,12 @@ def process(path, env='development'):
 
         delimiters = recognized_data['delimiters']
         if delimiters[0] is not None:
-            augmented_image = draw_delimiter(augmented_image, delimiters[0])
+            augmented_image = draw_y_delimiter(augmented_image, delimiters[0])
 
         if delimiters[1] is not None:
-            augmented_image = draw_delimiter(augmented_image, delimiters[1])
+            augmented_image = draw_y_delimiter(augmented_image, delimiters[1])
 
-        ImageManager.show(augmented_image, path, only_destroy_this=False)
-        # ImageManager.show(augmented_image, path, wait=False)
+        show_image(augmented_image, path, only_destroy_this=False)
 
     return recognized_data
 
@@ -64,7 +63,7 @@ def process_all():
     print(results)
 
 if __name__ == '__main__':
-    # process('../uploads/auchan-2.jpg')
+    # process('../uploads/profi-1.jpeg')
     process_all()
 
     cv2.waitKey(0)  # waits until a key is pressed
