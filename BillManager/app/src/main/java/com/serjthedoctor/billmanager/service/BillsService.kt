@@ -3,16 +3,17 @@ package com.serjthedoctor.billmanager.service
 import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.Dto
 import okhttp3.MultipartBody
+import retrofit2.Call
 import retrofit2.http.*
 
 interface BillsService {
     companion object {
-        const val API = "https://db28f9f0f7e3.ngrok.io"
         const val FLASK_API = "http://192.168.0.127:5000"
+        const val RAILS_API = "http://192.168.0.127:3000"
     }
 
     @GET("/bills")
-    suspend fun getAll(): List<Bill>
+    fun getAll(@Header("Authorization") token: String): Call<List<Bill>>
 
     @POST("/bills")
     suspend fun addOne(@Body bill: Bill): Bill
@@ -24,6 +25,9 @@ interface BillsService {
     suspend fun deleteOne(@Path("id") id: Int): Bill
 
     @Multipart
-    @POST("/receipts")
-    suspend fun uploadReceipt(@Part image: MultipartBody.Part): Dto
+    @POST("/bills")
+    fun uploadReceipt(
+        @Header("Authorization") token: String,
+        @Part image: MultipartBody.Part
+    ): Call<Bill>
 }

@@ -2,4 +2,6 @@
     <string name="app_name">Bill Manager App</string>
     <string name="title">Your bills</string>
     <string name="search_bill">Search…</string>
+    <string name="login">Login</string>
+    <string name="lei">lei</string>
 </resources>

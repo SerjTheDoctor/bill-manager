@@ -8,20 +8,23 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.ProgressBar
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.serjthedoctor.billmanager.adapter.BillsAdapter
 import com.serjthedoctor.billmanager.databinding.ActivityMainBinding
 import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
 
-
-private const val RECEIPT_SCANNER_ACTIVITY = 1
-private const val IMAGE_FROM_GALLERY = 2
-
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var model: BillsModel
+    private lateinit var adapter: BillsAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,23 +33,54 @@ class MainActivity : AppCompatActivity() {
 
         model = ViewModelProvider(this).get(BillsModel::class.java)
 
+        setupRecyclerView(binding.billsList)
+        loadBills()
+
+        binding.refreshButton.setOnClickListener { loadBills() }
+
         binding.takePictureButton.setOnClickListener {
-            val intent = Intent(application, ReceiptScannerActivity::class.java)
-            startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+            remarkDialog {
+                val intent = Intent(application, ReceiptScannerActivity::class.java)
+                startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+            }
         }
 
         binding.uploadImageButton.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK)
-            intent.type = "image/*"
-            startActivityForResult(intent, IMAGE_FROM_GALLERY)
+            remarkDialog {
+                val intent = Intent(Intent.ACTION_PICK)
+                intent.type = "image/*"
+                startActivityForResult(intent, IMAGE_FROM_GALLERY)
+            }
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == IMAGE_FROM_GALLERY && resultCode == RESULT_OK && data != null) {
-            data.data?.let { uploadFile(it) }
-        }
+    private fun remarkDialog(continuation: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setMessage("Please make sure that the photo covers all the receipt and the background is in high contrast with the document")
+            .setPositiveButton("Continue") { _, _ -> continuation()}
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss()}
+            .create()
+            .show()
+    }
+
+    private fun setupRecyclerView(recyclerView: RecyclerView) {
+        adapter = BillsAdapter()
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+    }
+
+    private fun loadBills() {
+        binding.progressBar.visibility = ProgressBar.VISIBLE
+        model.getBills(
+            onSuccess = { bills ->
+                adapter.setItems(bills)
+                binding.progressBar.visibility = ProgressBar.INVISIBLE
+            },
+            onFailure = { error ->
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+                binding.progressBar.visibility = ProgressBar.INVISIBLE
+            }
+        )
     }
 
     private fun uploadFile(uri: Uri) {
@@ -60,12 +94,29 @@ class MainActivity : AppCompatActivity() {
         fileStream.close()
         Log.d(TAG, "Wrote $bytes bytes to file ${file.absolutePath}")
 
-        model.uploadReceiptImage(file)
+        model.uploadReceiptImage(file,
+            onSuccess = { bill ->
+                Toast.makeText(this, "Got ${bill.id}", Toast.LENGTH_SHORT).show()
+                loadBills()
+            },
+            onFailure = { msg ->
+                Toast.makeText(this, "Error: $msg", Toast.LENGTH_LONG).show()
+            }
+        )
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == IMAGE_FROM_GALLERY && resultCode == RESULT_OK && data != null) {
+            data.data?.let { uploadFile(it) }
+        }
     }
 
     companion object {
         const val TAG = "MainActivity"
         const val JPG_FILE_SUFFIX = ".jpeg"
         const val RECEIPT_IMAGE_PREFIX = "phone-"
+        const val RECEIPT_SCANNER_ACTIVITY = 1
+        private const val IMAGE_FROM_GALLERY = 2
     }
 }

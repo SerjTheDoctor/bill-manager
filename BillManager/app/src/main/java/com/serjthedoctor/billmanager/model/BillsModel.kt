@@ -1,40 +1,108 @@
 package com.serjthedoctor.billmanager.model
 
 import android.app.Application
+import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.serjthedoctor.billmanager.LoginActivity
+import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.lib.ImageUtils
 import com.serjthedoctor.billmanager.service.BillsService
+import com.serjthedoctor.billmanager.service.CustomCallback
 import com.serjthedoctor.billmanager.service.ServiceFactory
+import com.serjthedoctor.billmanager.service.SessionManager
 import kotlinx.coroutines.launch
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.io.File
 
 class BillsModel(application: Application) : AndroidViewModel(application) {
+    private val app: Application = application
+    private val sessionManager: SessionManager = SessionManager(application)
     private val service: BillsService = ServiceFactory.createService(
             BillsService::class.java,
-            BillsService.FLASK_API
+            BillsService.RAILS_API
     )
 
-    fun uploadReceiptImage(file: File) {
-        viewModelScope.launch {
-            ImageUtils.ensurePortraitImageFile(file)
+    fun getBills(
+        onSuccess: (response: List<Bill>) -> Unit = {_ -> },
+        onFailure: (error: String?) -> Unit = {_ -> }
+    ) {
+        val token = sessionManager.getAuthToken()
+        checkToken(token)
 
-            val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)
+        service.getAll("Bearer $token").enqueue(object : CustomCallback<List<Bill>>(app) {
+            override fun onSuccess(call: Call<List<Bill>>, response: Response<List<Bill>>) {
+                if (response.isSuccessful) {
+                    val body = response.body() as List<Bill>
 
-            // MultipartBody.Part is used to send also the actual file name
-            val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
-            try {
-                val response = service.uploadReceipt(body)
-                response.date?.let { Log.d(TAG, it) }
+                    Log.d(TAG, "Fetched successfully: $body")
+                    onSuccess(body)
+                } else {
+                    val error = "Fetching failed: ${response.message()}"
+                    Log.e(TAG, error)
+                    onFailure(error)
+                }
             }
-            catch (e: Exception) {
-                Log.e(TAG, e.message.toString(), e)
+
+            override fun onFailure(call: Call<List<Bill>>, t: Throwable) {
+                val error = "Could not fetch bills. Error: ${t.message}"
+                Log.e(TAG, error, t)
+                onFailure(error)
             }
-        }
+        })
+    }
+
+    fun uploadReceiptImage(
+        file: File,
+        onSuccess: (response: Bill) -> Unit = {_ -> },
+        onFailure: (error: String?) -> Unit = {_ -> }
+    ) {
+        val token = sessionManager.getAuthToken()
+        checkToken(token)
+
+        ImageUtils.ensurePortraitImageFile(file)
+
+        // MultipartBody.Part is used to send also the actual file name
+        val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)
+        val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestFile)
+
+        service.uploadReceipt("Bearer $token", multipartBody).enqueue(object : CustomCallback<Bill>(app) {
+            override fun onSuccess(call: Call<Bill>, response: Response<Bill>) {
+                if (response.isSuccessful) {
+                    val body = response.body() as Bill
+
+                    Log.d(TAG, "Sent successfully: $body")
+                    onSuccess(body)
+                } else {
+                    val error = "Sending failed: ${response.message()}"
+                    Log.e(TAG, error)
+                    onFailure(error)
+                }
+            }
+
+            override fun onFailure(call: Call<Bill>, t: Throwable) {
+                val error = "Could not send receipt document. Error: ${t.message}"
+                Log.e(TAG, error, t)
+                onFailure(error)
+            }
+        })
+    }
+
+    private fun checkToken(token: String?) {
+        if (!token.isNullOrEmpty()) return
+
+        Log.e(TAG, "Null or empty token. Starting LOGIN Activity")
+
+        val intent = Intent(app, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        app.startActivity(intent)
     }
 
     companion object {
