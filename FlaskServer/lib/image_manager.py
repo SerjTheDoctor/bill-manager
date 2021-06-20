@@ -3,7 +3,7 @@ import random
 import imutils
 import numpy as np
 from skimage.filters import threshold_local
-from lib.image_helper import open_image
+from lib.image_helper import open_image, order_points
 from datetime import datetime
 
 # Maybe remove class and leave only methods
@@ -71,9 +71,12 @@ class ImageManager:
 
         if visuals:
             # pprint('Displaying current images')
-            cv2.imshow("Image", image)
-            # cv2.imshow("Grayed", gray)
-            # cv2.imshow("Edged", edged)
+            cv2.imshow("Original", image)
+            # cv2.imwrite('original.jpg', image)
+            cv2.imshow("Gaussian Blur", gray)
+            # cv2.imwrite('gaussian.jpg', gray)
+            cv2.imshow("Edges", edged)
+            # cv2.imwrite('edges.jpg', edged)
 
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
@@ -128,10 +131,11 @@ class ImageManager:
 
         if len(color) == 3:
             cv2.drawContours(image, contours, -1, color, thickness)
+            # cv2.imwrite('contoured.jpg', image)
 
-            cv2.imshow("Contour", imutils.resize(image, height=1000))   # why resize ???
-            # cv2.waitKey(0)
-            # cv2.destroyWindow("Contour")
+            cv2.imshow("Contour", imutils.resize(image, height=1000))
+            cv2.waitKey(0)
+            cv2.destroyWindow("Contour")
         elif color == 'all_random':
             for c in contours:
                 r = random.randrange(257)
@@ -139,7 +143,7 @@ class ImageManager:
                 b = random.randrange(257)
                 cv2.drawContours(image, [c], -1, (r, g, b), thickness)
 
-                cv2.imshow("Contour", imutils.resize(image, height=1000))  # why resize ???
+                cv2.imshow("Contour", imutils.resize(image, height=1000))
                 cv2.waitKey(0)
                 cv2.destroyWindow("Contour")
 
@@ -149,7 +153,7 @@ class ImageManager:
             b = random.randrange(257)
             cv2.drawContours(image, contours, -1, (r, g, b), thickness)
 
-            cv2.imshow("Contour", imutils.resize(image, height=1000))   # why resize ???
+            cv2.imshow("Contour", imutils.resize(image, height=1000))
             cv2.waitKey(0)
             cv2.destroyWindow("Contour")
 
@@ -162,7 +166,7 @@ class ImageManager:
         # view of the original image
         pprint('Applying four point transformation and thresholding')
         image = ImageManager.four_point_transform(original_image, contour.reshape(4, 2) * original_image_ratio)
-
+        # image_s = image
         # convert the warped image to grayscale, then threshold it
         # to give it that 'black and white' paper effect
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -175,7 +179,9 @@ class ImageManager:
         if visuals:
             # show the original and scanned images
             # cv2.imshow("Original", imutils.resize(original_image, height=650))
+            # cv2.imshow("De skewed simple", imutils.resize(image_s, height=650))
             # cv2.imshow("De skewed", imutils.resize(image, height=650))
+            # cv2.imshow("Warped", imutils.resize(image, height=500))
             pass
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
@@ -185,7 +191,7 @@ class ImageManager:
     @staticmethod
     def four_point_transform(image, pts):
         # obtain a consistent order of the points and unpack them
-        rect = ImageManager.order_points(pts)
+        rect = order_points(pts)
         (tl, tr, br, bl) = rect
 
         # compute the width of the new image, which will be the
@@ -220,29 +226,6 @@ class ImageManager:
         # return the warped image
         return warped
 
-    @staticmethod
-    def order_points(pts):
-        # initialize a list of coordinates that will be ordered
-        # such that the first entry in the list is the top-left,
-        # the second entry is the top-right, the third is the
-        # bottom-right, and the fourth is the bottom-left
-        rect = np.zeros((4, 2), dtype="float32")
-
-        # the top-left point will have the smallest sum, whereas
-        # the bottom-right point will have the largest sum
-        s = pts.sum(axis=1)
-        rect[0] = pts[np.argmin(s)]
-        rect[2] = pts[np.argmax(s)]
-
-        # now, compute the difference between the points, the
-        # top-right point will have the smallest difference,
-        # whereas the bottom-left will have the largest difference
-        diff = np.diff(pts, axis=1)
-        rect[1] = pts[np.argmin(diff)]
-        rect[3] = pts[np.argmax(diff)]
-
-        # return the ordered coordinates
-        return rect
 
 def pprint(message):
     now = datetime.now().strftime('%H:%M:%S.%f')

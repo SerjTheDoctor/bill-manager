@@ -1,8 +1,10 @@
 <component name="ProjectDictionaryState">
   <dictionary name="sergi">
     <words>
+      <w>falsy</w>
       <w>imshow</w>
       <w>imutils</w>
+      <w>sqlalchemy</w>
       <w>strftime</w>
       <w>tesseract</w>
       <w>thresholding</w>

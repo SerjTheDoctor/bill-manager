@@ -6,7 +6,7 @@ from typing import List
 import re
 
 PRICE_REGEX = '[0-9]+[.,][0-9]{1,2}'
-QUANTITY_REGEX = ' X '
+QUANTITY_REGEX = '( X )'
 
 # Quantity Position Style
 #   BEFORE - the QUANTITY is before the name, aka it's on the line above
@@ -158,7 +158,7 @@ def __try_parse_items(lines: List[Node], image, quantity_position_style):
     for removable in lines_to_remove:
         lines.remove(removable)
 
-    show_quick_augmented_image(image, lines_to_remove)
+    # show_quick_augmented_image(image, lines_to_remove)
 
     other_items = __try_parse_items(lines, image, quantity_position_style)
 
@@ -198,7 +198,7 @@ def __try_extract_quantity(words, item):
         pprint('Quantity was not found, computing or defaulting to 1')
         try:
             quantity = string2float(item['total_price']) / string2float(item['unit_price'])
-            quantity = str(quantity) if int(quantity) == quantity else '1'
+            # quantity = str(quantity) if int(quantity) == quantity else '1' # why this?
         except ZeroDivisionError or TypeError:
             quantity = '1'
         item['quantity'] = quantity

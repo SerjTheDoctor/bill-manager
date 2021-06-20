@@ -13,7 +13,6 @@ from lib.receipt_cpu import process
 from google.cloud import vision
 
 
-
 # process('../uploads/auchan-2.jpg')
 
 def detect_text(path):
@@ -43,7 +42,7 @@ def detect_text(path):
             'https://cloud.google.com/apis/design/errors'.format(
                 response.error.message))
 
-detect_text('../uploads/auchan-2.jpg')
+# detect_text('../uploads/auchan-2.jpg')
 
 def order_points(pts):
     # initialize a list of coordinates that will be ordered
@@ -110,7 +109,7 @@ def testing_extract_text(path='../receipts/1.jpg'):
     img = ImageManager.open_image(path)
     img = ImageManager.apply_contrast_and_brightness(img)
 
-    data = TextManager.extract_tesseract(img)
+    data = []#TextManager.extract_tesseract(img)
 
     # print_data_table(data)
 
@@ -281,7 +280,7 @@ def testing_image_processing(path='../receipts/3.jpg'):
     processed_image = de_skew_image(orig, contour, ratio)
     # processed_image = imutils.resize(processed_image, height=600)
 
-    data = TextManager.extract_tesseract(processed_image)
+    data = []#TextManager.extract_tesseract(processed_image)
 
     # print_data_table(data)
 

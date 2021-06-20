@@ -65,9 +65,12 @@ class ExtractedObject:
         # vertices = [(l, t), (r, t), (r, b), (l, b)]
         vertices = data.bounding_box.vertices
 
-        start = (vertices[0].x, vertices[0].y)
-        height = vertices[3].y - vertices[0].y
-        width = vertices[1].x - vertices[0].x
+        y_pad = 0   # works well with 5 (fixes h&m)
+        x_pad = 0   # 1
+
+        start = (vertices[0].x - x_pad, vertices[0].y - y_pad)
+        height = vertices[3].y - vertices[0].y + y_pad
+        width = vertices[1].x - vertices[0].x + x_pad
         confidence = data.confidence
 
         text = ''.join([s.text for s in data.symbols])

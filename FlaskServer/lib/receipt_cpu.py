@@ -7,15 +7,15 @@ import cv2
 import os
 import imutils
 
-def process(path, env='development'):
+def process(path, ext=None, env='development'):
     pprint("####### " + path + " #######")
 
     # -- Image processing -- #
     image_params = {
         'de_skew_binary_block_size': 17,
-        'de_skew_binary_offset': 10
+        'de_skew_binary_offset': 10,
     }
-    if env == 'test':
+    if env != 'development':
         image_params['show_progress_images'] = False
     image = ImageManager.process(path, image_params)
 
@@ -25,15 +25,17 @@ def process(path, env='development'):
     text_params = {
         'ocr-engine': 'google'
     }
-    recognized_data, all_data = TextManager.recognize(image, get_extension(path), text_params)
+    file_ext = get_extension(path) if ext is None else ext
+    recognized_data, all_data = TextManager.recognize(image, file_ext, text_params)
 
     print(pretty_bill(recognized_data))
 
     # -- Augmented image -- #
 
-    if env != 'test':
+    if env == 'development':
         pprint('Augmenting image')
-        augmented_image = augment_image(image, all_data)
+        colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        augmented_image = colored_image#augment_image(image, all_data)
 
         delimiters = recognized_data['delimiters']
         if delimiters[0] is not None:
@@ -42,6 +44,7 @@ def process(path, env='development'):
         if delimiters[1] is not None:
             augmented_image = draw_y_delimiter(augmented_image, delimiters[1])
 
+        cv2.imwrite('delimited_{}.jpg'.format(path.split('/')[-1]), augmented_image)
         show_image(augmented_image, path, only_destroy_this=False)
 
     return recognized_data
@@ -63,8 +66,8 @@ def process_all():
     print(results)
 
 if __name__ == '__main__':
-    # process('../uploads/profi-1.jpeg')
-    process_all()
+    process('../uploads/carrefour-1.jpeg')
+    # process_all()
 
     cv2.waitKey(0)  # waits until a key is pressed
     cv2.destroyAllWindows()

@@ -3,12 +3,15 @@ import re
 from typing import List, Optional
 from datetime import datetime
 from lib.utils import pretty_list
-from lib.image_helper import image2bytes, show_quick_augmented_image, draw_y_delimiter
+from lib.image_helper import image2bytes, show_quick_augmented_image
 from lib.item_recognizer import extract_items, split_by_regions, search_total
 from model import ExtractedTree, Node, NodeType
 from model import ExtractedObject
 from texttable import Texttable
 from google.cloud import vision
+import cv2
+import numpy as np
+import random
 
 class TextManager:
     @staticmethod
@@ -52,6 +55,8 @@ class TextManager:
         response = client.document_text_detection(image=vision_image)
         blocks = response.full_text_annotation.pages[0].blocks
 
+        # print(blocks)
+
         for block_i, block in enumerate(blocks):
             for par_i, par in enumerate(block.paragraphs):
                 for word_i, word in enumerate(par.words):
@@ -71,7 +76,9 @@ class TextManager:
             # Show the process of creating lines step by step
             # show_quick_augmented_image(image, tree_data.get_lines())
 
-        # Debug
+        # show_quick_augmented_image(image, tree_data.get_lines())
+
+        # Print data in a table
         # TextManager.print_data_tree_table(tree_data, NodeType.LINE)
 
         return tree_data
