@@ -22,7 +22,10 @@ interface BillsService {
     suspend fun updateOne(@Path("id") id: Int, @Body bill: Bill): Bill
 
     @DELETE("/bills/{id}")
-    suspend fun deleteOne(@Path("id") id: Int): Bill
+    fun deleteOne(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Call<Bill>
 
     @Multipart
     @POST("/bills")

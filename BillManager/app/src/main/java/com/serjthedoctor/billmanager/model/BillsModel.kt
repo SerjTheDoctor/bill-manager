@@ -95,6 +95,40 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
+    fun deleteBill(
+        bill: Bill,
+        onSuccess: (response: Bill) -> Unit = {_ -> },
+        onFailure: (error: String?) -> Unit = {_ -> }
+    ) {
+        val token = sessionManager.getAuthToken()
+        checkToken(token)
+
+        if (bill.id == null) {
+            return
+        }
+
+        service.deleteOne("Bearer $token", bill.id!!).enqueue(object : CustomCallback<Bill>(app) {
+            override fun onSuccess(call: Call<Bill>, response: Response<Bill>) {
+                if (response.isSuccessful) {
+                    val body = response.body() as Bill
+
+                    Log.d(TAG, "Removed successfully: ${body.id}")
+                    onSuccess(body)
+                } else {
+                    val error = "Removing bill ${bill.id} failed: ${response.message()}"
+                    Log.e(TAG, error)
+                    onFailure(error)
+                }
+            }
+
+            override fun onFailure(call: Call<Bill>, t: Throwable) {
+                val error = "Could not remove bill ${bill.id}. Error: ${t.message}"
+                Log.e(TAG, error, t)
+                onFailure(error)
+            }
+        })
+    }
+
     private fun checkToken(token: String?) {
         if (!token.isNullOrEmpty()) return
 

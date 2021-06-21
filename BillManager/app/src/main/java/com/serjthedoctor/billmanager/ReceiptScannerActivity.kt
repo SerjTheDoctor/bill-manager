@@ -2,12 +2,15 @@ package com.serjthedoctor.billmanager
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
@@ -21,6 +24,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 class ReceiptScannerActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
@@ -47,7 +51,10 @@ class ReceiptScannerActivity : AppCompatActivity() {
         }
 
         // Set up the listener for take photo button
-        binding.cameraCaptureButton.setOnClickListener { takePhoto() }
+        binding.captureButton.setOnClickListener {
+            makeButtonUnavailable()
+            takePhoto()
+        }
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
@@ -70,37 +77,63 @@ class ReceiptScannerActivity : AppCompatActivity() {
             imageCapture = ImageCapture.Builder().build()
 
             // Image Analyzer
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, ImageAnalyzer { visionText, height, width ->
-                        Log.d(TAG, "Detected ${visionText.text}!")
-                        binding.overlay.setRecognizedData(visionText.textBlocks, height, width)
-                    })
-                }
-
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            // val imageAnalyzer = ImageAnalysis.Builder()
+            //     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            //     .build()
+            //     .also {
+            //         it.setAnalyzer(cameraExecutor, ImageAnalyzer { visionText, height, width ->
+            //             Log.d(TAG, "Detected ${visionText.text}!")
+            //             binding.overlay.setRecognizedData(visionText.textBlocks, height, width)
+            //         })
+            //     }
 
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
+                val camera = cameraProvider.bindToLifecycle(
                     this,
-                    cameraSelector,
+                    CAMERA_SELECTOR,
                     imageCapture,
                     preview,
                     // imageAnalyzer
                 )
 
-            } catch(e: Exception) {
+                enableManualFocus(camera.cameraControl)
+            } catch (e: Exception) {
                 Log.e(TAG, "Use case binding failed", e)
             }
 
         }, ContextCompat.getMainExecutor(this))
+
+
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun enableManualFocus(cameraControl: CameraControl) {
+        binding.viewFinder.setOnTouchListener { _: View, motionEvent: MotionEvent ->
+            when (motionEvent.action) {
+                MotionEvent.ACTION_DOWN -> return@setOnTouchListener true
+                MotionEvent.ACTION_UP -> {
+                    // Get the MeteringPointFactory from PreviewView
+                    val factory = binding.viewFinder.createMeteringPointFactory(CAMERA_SELECTOR)
+
+                    // Create a MeteringPoint from the tap coordinates
+                    val point = factory.createPoint(motionEvent.x, motionEvent.y)
+
+                    // Create a MeteringAction from the MeteringPoint, you can configure it to specify the metering mode
+                    val action = FocusMeteringAction.Builder(point).build()
+
+                    // Trigger the focus and metering. The method returns a ListenableFuture since the operation
+                    // is asynchronous. You can use it get notified when the focus is successful or if it fails.
+                    cameraControl.startFocusAndMetering(action)
+
+                    return@setOnTouchListener true
+                }
+                else -> return@setOnTouchListener false
+            }
+        }
     }
 
     private fun takePhoto() {
@@ -124,18 +157,43 @@ class ReceiptScannerActivity : AppCompatActivity() {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val url = Uri.fromFile(photoFile)
 
-                    model.uploadReceiptImage(photoFile)
-
                     val msg = "Photo was successfully captured: $url"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
+
+                    model.uploadReceiptImage(photoFile,
+                        onSuccess = {
+                            val resultIntent = Intent()
+                            setResult(RESULT_OK, resultIntent)
+                            finish()
+                        },
+                        onFailure = { error ->
+                            Toast.makeText(
+                                this@ReceiptScannerActivity,
+                                "Upload error: $error",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            makeButtonAvailable()
+                        }
+                    )
                 }
 
                 override fun onError(e: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${e.message}", e)
+                    makeButtonAvailable()
                 }
             }
         )
+    }
+
+    private fun makeButtonAvailable() {
+        binding.captureButton.isClickable = true
+        binding.captureButton.alpha = 1f
+    }
+
+    private fun makeButtonUnavailable() {
+        binding.captureButton.isClickable = false
+        binding.captureButton.alpha = 0.3f
     }
 
     private fun getOutputDirectory(): File {
@@ -153,7 +211,8 @@ class ReceiptScannerActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(this,
+                Toast.makeText(
+                    this,
                     "Permissions not granted by the user.",
                     Toast.LENGTH_SHORT
                 ).show()
@@ -172,6 +231,7 @@ class ReceiptScannerActivity : AppCompatActivity() {
     }
 
     companion object {
+        val CAMERA_SELECTOR = CameraSelector.DEFAULT_BACK_CAMERA
         const val TAG = "ReceiptScannerActivity"
         const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         const val REQUEST_CODE_PERMISSIONS = 10

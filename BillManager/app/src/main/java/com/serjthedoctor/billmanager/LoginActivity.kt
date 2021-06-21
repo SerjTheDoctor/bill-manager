@@ -23,12 +23,6 @@ class LoginActivity : AppCompatActivity() {
 
         authModel = ViewModelProvider(this).get(AuthModel::class.java)
 
-        val sessionManager = SessionManager(this)
-        // if (!sessionManager.getAuthToken().isNullOrEmpty()) {
-        //     val userId = sessionManager.getUserId()
-        //     authModel.getUser(userId, onSuccess = this::loginSuccess)
-        // }
-
         binding.loginSubmitButton.setOnClickListener {
             val email = binding.loginEmailInput.text.toString()
             val password = binding.loginPasswordInput.text.toString()

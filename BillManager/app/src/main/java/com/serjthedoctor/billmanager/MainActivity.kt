@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.serjthedoctor.billmanager.adapter.BillsAdapter
 import com.serjthedoctor.billmanager.databinding.ActivityMainBinding
+import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
 
@@ -64,7 +65,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView(recyclerView: RecyclerView) {
-        adapter = BillsAdapter()
+        adapter = BillsAdapter(object : BillsAdapter.OnClickItemListener {
+            override fun onClickItem(b: Bill) {
+                Log.d(TAG, "Selected ${b.merchant}")
+            }
+        }, object : BillsAdapter.OnLongClickItemListener {
+            override fun onLongClickItem(b: Bill) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage("Are you sure you want to bill from ${b.merchant}?")
+                    .setPositiveButton("Continue") { _, _ ->
+                        Log.d(TAG, "Will delete ${b.merchant}")
+
+                        model.deleteBill(b,
+                            onSuccess = { loadBills() },
+                            onFailure = { error ->
+                                Toast.makeText(this@MainActivity, error, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    }
+                    .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss()}
+                    .create()
+                    .show()
+            }
+        })
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
     }
@@ -83,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun uploadFile(uri: Uri) {
+    private fun getFile(uri: Uri): File {
         val file = File.createTempFile(RECEIPT_IMAGE_PREFIX, JPG_FILE_SUFFIX)
 
         val uriStream = contentResolver.openInputStream(uri)
@@ -94,9 +117,13 @@ class MainActivity : AppCompatActivity() {
         fileStream.close()
         Log.d(TAG, "Wrote $bytes bytes to file ${file.absolutePath}")
 
+        return file
+    }
+
+    private fun uploadFile(file: File) {
         model.uploadReceiptImage(file,
             onSuccess = { bill ->
-                Toast.makeText(this, "Got ${bill.id}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Processed bill ${bill.id}", Toast.LENGTH_SHORT).show()
                 loadBills()
             },
             onFailure = { msg ->
@@ -108,7 +135,12 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == IMAGE_FROM_GALLERY && resultCode == RESULT_OK && data != null) {
-            data.data?.let { uploadFile(it) }
+            data.data?.let {
+                val file = getFile(it)
+                uploadFile(file)
+            }
+        } else if (requestCode == RECEIPT_SCANNER_ACTIVITY && resultCode == RESULT_OK) {
+            loadBills()
         }
     }
 

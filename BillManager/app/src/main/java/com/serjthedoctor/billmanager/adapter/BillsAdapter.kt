@@ -9,14 +9,19 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestOptions
 import com.serjthedoctor.billmanager.R
 import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.BillStatus
-import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-class BillsAdapter: RecyclerView.Adapter<BillsAdapter.BillsViewHolder>() {
+
+class BillsAdapter internal constructor(
+    private val onClickItemListener: OnClickItemListener,
+    private val onLongClickItemListener: OnLongClickItemListener
+): RecyclerView.Adapter<BillsAdapter.BillsViewHolder>() {
     private var items = mutableListOf<Bill>()
 
     inner class BillsViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -26,6 +31,20 @@ class BillsAdapter: RecyclerView.Adapter<BillsAdapter.BillsViewHolder>() {
         val date: TextView = view.findViewById(R.id.bill_date)
         val status: TextView = view.findViewById(R.id.bill_status)
         val imageView: ImageView = view.findViewById(R.id.bill_image)
+
+        init {
+            view.setOnClickListener {
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onClickItemListener.onClickItem(items[adapterPosition])
+                }
+            }
+            view.setOnLongClickListener {
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    onLongClickItemListener.onLongClickItem(items[adapterPosition])
+                }
+                true
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BillsViewHolder {
@@ -89,7 +108,11 @@ class BillsAdapter: RecyclerView.Adapter<BillsAdapter.BillsViewHolder>() {
             holder.status.text = currentItem.status!!.name
         }
 
-        Glide.with(holder.itemView).load(currentItem.imageUrl).into(holder.imageView)
+        val requestOptions = RequestOptions().transform(RoundedCorners(16))
+        Glide.with(holder.itemView)
+            .load(currentItem.imageUrl)
+            .apply(requestOptions)
+            .into(holder.imageView)
     }
 
     override fun getItemCount(): Int = items.size
@@ -100,11 +123,19 @@ class BillsAdapter: RecyclerView.Adapter<BillsAdapter.BillsViewHolder>() {
         notifyDataSetChanged()
     }
 
+    interface OnClickItemListener {
+        fun onClickItem(b: Bill)
+    }
+
+    interface OnLongClickItemListener {
+        fun onLongClickItem(b: Bill)
+    }
+
     private fun String.limit(chars: Int): String {
         return if (length < chars) {
             this
         } else {
-            this.substring(0, chars-3) + "..."
+            this.substring(0, chars - 3) + "..."
         }
     }
 }
