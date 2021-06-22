@@ -16,9 +16,11 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import com.serjthedoctor.billmanager.adapter.BillsAdapter
 import com.serjthedoctor.billmanager.databinding.ActivityMainBinding
 import com.serjthedoctor.billmanager.domain.Bill
+import com.serjthedoctor.billmanager.domain.BillStatus
 import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
 
@@ -67,7 +69,13 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView(recyclerView: RecyclerView) {
         adapter = BillsAdapter(object : BillsAdapter.OnClickItemListener {
             override fun onClickItem(b: Bill) {
-                Log.d(TAG, "Selected ${b.merchant}")
+                if (b.status == BillStatus.PROCESSED) {
+                    val detailsIntent = Intent(application, DetailsActivity::class.java)
+                    detailsIntent.putExtra(DetailsActivity.BILL_ID, b.id)
+                    startActivityForResult(detailsIntent, DETAILS_ACTIVITY)
+                } else {
+                    Snackbar.make(binding.root, "Receipt not yet processed", Snackbar.LENGTH_SHORT)
+                }
             }
         }, object : BillsAdapter.OnLongClickItemListener {
             override fun onLongClickItem(b: Bill) {
@@ -150,5 +158,6 @@ class MainActivity : AppCompatActivity() {
         const val RECEIPT_IMAGE_PREFIX = "phone-"
         const val RECEIPT_SCANNER_ACTIVITY = 1
         private const val IMAGE_FROM_GALLERY = 2
+        const val DETAILS_ACTIVITY = 3
     }
 }

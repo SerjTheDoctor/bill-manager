@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.io.Serializable
 import java.time.LocalDate
-import java.util.*
 
 // @Entity(tableName = "bills")
 data class Bill (
@@ -16,7 +15,8 @@ data class Bill (
     var merchant: String?,
     var price: Float?,
     var imageUrl: String?,
-    // add items
+
+    var items: List<Item>?
 ) : Serializable
 
 enum class BillStatus {

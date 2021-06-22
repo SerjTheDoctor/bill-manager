@@ -34,10 +34,9 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         onSuccess: (response: List<Bill>) -> Unit = {_ -> },
         onFailure: (error: String?) -> Unit = {_ -> }
     ) {
-        val token = sessionManager.getAuthToken()
-        checkToken(token)
+        val token = getToken()
 
-        service.getAll("Bearer $token").enqueue(object : CustomCallback<List<Bill>>(app) {
+        service.getAll(token).enqueue(object : CustomCallback<List<Bill>>(app) {
             override fun onSuccess(call: Call<List<Bill>>, response: Response<List<Bill>>) {
                 if (response.isSuccessful) {
                     val body = response.body() as List<Bill>
@@ -59,13 +58,41 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
+    fun getBill(
+        id: Int,
+        onSuccess: (response: Bill) -> Unit = {_ -> },
+        onFailure: (error: String?) -> Unit = {_ -> }
+    ) {
+        val token = getToken()
+
+        service.getOne(token, id).enqueue(object : CustomCallback<Bill>(app) {
+            override fun onSuccess(call: Call<Bill>, response: Response<Bill>) {
+                if (response.isSuccessful) {
+                    val body = response.body() as Bill
+
+                    Log.d(TAG, "Fetched one successfully: $body")
+                    onSuccess(body)
+                } else {
+                    val error = "Fetching one with id $id failed: ${response.message()}"
+                    Log.e(TAG, error)
+                    onFailure(error)
+                }
+            }
+
+            override fun onFailure(call: Call<Bill>, t: Throwable) {
+                val error = "Could not fetch bill with id $id. Error: ${t.message}"
+                Log.e(TAG, error, t)
+                onFailure(error)
+            }
+        })
+    }
+
     fun uploadReceiptImage(
         file: File,
         onSuccess: (response: Bill) -> Unit = {_ -> },
         onFailure: (error: String?) -> Unit = {_ -> }
     ) {
-        val token = sessionManager.getAuthToken()
-        checkToken(token)
+        val token = getToken()
 
         ImageUtils.ensurePortraitImageFile(file)
 
@@ -73,7 +100,7 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)
         val multipartBody = MultipartBody.Part.createFormData("image", file.name, requestFile)
 
-        service.uploadReceipt("Bearer $token", multipartBody).enqueue(object : CustomCallback<Bill>(app) {
+        service.uploadReceipt(token, multipartBody).enqueue(object : CustomCallback<Bill>(app) {
             override fun onSuccess(call: Call<Bill>, response: Response<Bill>) {
                 if (response.isSuccessful) {
                     val body = response.body() as Bill
@@ -100,14 +127,13 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         onSuccess: (response: Bill) -> Unit = {_ -> },
         onFailure: (error: String?) -> Unit = {_ -> }
     ) {
-        val token = sessionManager.getAuthToken()
-        checkToken(token)
+        val token = getToken()
 
         if (bill.id == null) {
             return
         }
 
-        service.deleteOne("Bearer $token", bill.id!!).enqueue(object : CustomCallback<Bill>(app) {
+        service.deleteOne(token, bill.id!!).enqueue(object : CustomCallback<Bill>(app) {
             override fun onSuccess(call: Call<Bill>, response: Response<Bill>) {
                 if (response.isSuccessful) {
                     val body = response.body() as Bill
@@ -129,14 +155,20 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
         })
     }
 
-    private fun checkToken(token: String?) {
-        if (!token.isNullOrEmpty()) return
+    private fun getToken(): String {
+        val token = sessionManager.getAuthToken()
 
-        Log.e(TAG, "Null or empty token. Starting LOGIN Activity")
+        if (token.isNullOrEmpty()) {
+            Log.e(TAG, "Null or empty token. Starting LOGIN Activity")
 
-        val intent = Intent(app, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        app.startActivity(intent)
+            val intent = Intent(app, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            app.startActivity(intent)
+
+            return ""
+        }
+
+        return "Bearer $token"
     }
 
     companion object {

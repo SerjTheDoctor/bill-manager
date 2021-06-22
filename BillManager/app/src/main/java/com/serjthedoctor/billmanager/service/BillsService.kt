@@ -15,14 +15,8 @@ interface BillsService {
     @GET("/bills")
     fun getAll(@Header("Authorization") token: String): Call<List<Bill>>
 
-    @POST("/bills")
-    suspend fun addOne(@Body bill: Bill): Bill
-
-    @PUT("/bills/{id}")
-    suspend fun updateOne(@Path("id") id: Int, @Body bill: Bill): Bill
-
-    @DELETE("/bills/{id}")
-    fun deleteOne(
+    @GET("/bills/{id}")
+    fun getOne(
         @Header("Authorization") token: String,
         @Path("id") id: Int
     ): Call<Bill>
@@ -32,5 +26,14 @@ interface BillsService {
     fun uploadReceipt(
         @Header("Authorization") token: String,
         @Part image: MultipartBody.Part
+    ): Call<Bill>
+
+    @PUT("/bills/{id}")
+    suspend fun updateOne(@Path("id") id: Int, @Body bill: Bill): Bill
+
+    @DELETE("/bills/{id}")
+    fun deleteOne(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
     ): Call<Bill>
 }

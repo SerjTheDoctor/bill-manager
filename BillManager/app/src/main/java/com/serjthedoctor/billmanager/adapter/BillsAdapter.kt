@@ -62,10 +62,10 @@ class BillsAdapter internal constructor(
                 holder.name.text = "-"
             } else {
                 val date: String = currentItem.date!!.format(DateTimeFormatter.ofPattern("EEEE"))
-                holder.name.text = ("$date at ${currentItem.merchant!!.limit(25)}")
+                holder.name.text = ("$date at ${currentItem.merchant}".limit(25))
             }
         } else {
-            holder.name.text = currentItem.name?.limit(25)
+            holder.name.text = currentItem.name?.limit(33)
         }
 
         if (currentItem.price == null) {
@@ -77,7 +77,7 @@ class BillsAdapter internal constructor(
         if (currentItem.merchant == null) {
             holder.merchant.text = "-"
         } else {
-            holder.merchant.text = currentItem.merchant?.limit(25)
+            holder.merchant.text = currentItem.merchant?.limit(32)
         }
 
         if (currentItem.date == null) {
