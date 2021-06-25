@@ -29,7 +29,11 @@ interface BillsService {
     ): Call<Bill>
 
     @PUT("/bills/{id}")
-    suspend fun updateOne(@Path("id") id: Int, @Body bill: Bill): Bill
+    fun updateOne(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body bill: Bill
+    ): Call<Bill>
 
     @DELETE("/bills/{id}")
     fun deleteOne(

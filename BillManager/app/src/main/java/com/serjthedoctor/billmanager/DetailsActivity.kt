@@ -1,19 +1,32 @@
 package com.serjthedoctor.billmanager
 
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
+import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestOptions
 import com.serjthedoctor.billmanager.adapter.ItemsAdapter
 import com.serjthedoctor.billmanager.databinding.ActivityDetailsBinding
 import com.serjthedoctor.billmanager.domain.Bill
+import com.serjthedoctor.billmanager.domain.BillStatus
+import com.serjthedoctor.billmanager.lib.limit
 import com.serjthedoctor.billmanager.model.BillsModel
 import kotlinx.android.synthetic.main.activity_details.*
 import kotlinx.android.synthetic.main.activity_main.view.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlin.math.abs
 
 
 class DetailsActivity : AppCompatActivity() {
@@ -42,6 +55,36 @@ class DetailsActivity : AppCompatActivity() {
         backButton.setOnClickListener {
             finish()
         }
+        saveButton.setOnClickListener {
+            saveBillDetails()
+        }
+    }
+
+    @SuppressLint("NewApi")
+    private fun saveBillDetails() {
+        bill.name = binding.deName.text.toString()
+        bill.merchant = binding.deMerchant.text.toString()
+
+        val formatter = DateTimeFormatter.ofPattern("d/M/yyyy")
+        val localDate = LocalDate.parse(binding.deDate.text.toString(), formatter)
+        bill.date = localDate
+
+        bill.price = binding.deTotal.text.toString().toFloat()
+
+        model.updateOne(bill,
+            onSuccess = {
+                val resultIntent = Intent()
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            },
+            onFailure = {
+                Toast.makeText(
+                    this@DetailsActivity,
+                    "Update error: $it",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        )
     }
 
     private fun loadBillDetails(billId: Int) {
@@ -58,15 +101,58 @@ class DetailsActivity : AppCompatActivity() {
     }
 
     private fun populate() {
-        binding.deTitle.text = bill.name
+        binding.deTitle.text = bill.name?.limit(20)
         binding.deName.setText(bill.name)
         binding.deMerchant.setText(bill.merchant)
-        binding.deTotal.setText(bill.price.toString())
 
-        binding.deName.setOnFocusChangeListener { view, b ->
-            if (!b) binding.deTitle.text = binding.deName.text
+        // when name input losses focus, update the title
+        binding.deName.setOnFocusChangeListener { _, focused ->
+            if (!focused) binding.deTitle.text = binding.deName.text
         }
 
+        when (bill.status) {
+            BillStatus.QUEUED -> binding.deStatus.setTextColor(Color.RED)
+            BillStatus.RUNNING -> binding.deStatus.setTextColor(Color.parseColor("#CCCC00"))
+            BillStatus.PROCESSED -> binding.deStatus.setTextColor(Color.GREEN)
+            else -> binding.deStatus.setTextColor(Color.BLACK)
+        }
+
+        if (bill.status == null) {
+            binding.deStatus.text = "-"
+        } else {
+            binding.deStatus.text = bill.status!!.name
+        }
+
+        populateTotalPrice()
+        populateDate()
+        populateImages()
+    }
+
+    private fun populateTotalPrice() {
+        binding.deTotal.setText(bill.price.toString())
+
+        binding.deTotal.setOnKeyListener { _, _, _ ->
+            if (bill.items != null && !binding.deTotal.text.isNullOrBlank()) {
+                try {
+                    val totalPrice = binding.deTotal.text.toString().toFloat()
+                    val sum = bill.items!!.sumByDouble { (it.price ?: 0).toDouble() }
+                    if (abs(totalPrice - sum) > 1) {
+                        binding.deTotal.setTextColor(Color.RED)
+                    } else {
+                        binding.deTotal.setTextColor(Color.BLACK)
+                    }
+                } catch (e: Exception) {
+                    e.message?.let {
+                        Log.e("[DetailsActivity/populateTotalPrice] ERROR: ", e.message, e)
+                    }
+                }
+            }
+            false
+        }
+
+    }
+
+    private fun populateDate() {
         val calendar: Calendar = Calendar.getInstance()
         var day: Int = calendar.get(Calendar.DAY_OF_MONTH)
         var month: Int = calendar.get(Calendar.MONTH)
@@ -99,6 +185,27 @@ class DetailsActivity : AppCompatActivity() {
                 day
             )
             picker.show()
+        }
+    }
+
+    private fun populateImages() {
+        val requestOptions = RequestOptions().transform(RoundedCorners(16))
+
+        Glide.with(this)
+            .load(bill.imageUrl)
+            .apply(requestOptions)
+            .into(binding.deBillImage)
+
+        Glide.with(this)
+            .load(bill.imageUrl)
+            .apply(requestOptions)
+            .into(binding.deBigBillImage)
+
+        binding.deBillImage.setOnClickListener {
+            binding.deBigConstraint.visibility = View.VISIBLE
+        }
+        binding.deBigConstraint.setOnClickListener {
+            binding.deBigConstraint.visibility = View.INVISIBLE
         }
     }
 

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
-import android.media.ExifInterface
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -28,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var model: BillsModel
     private lateinit var adapter: BillsAdapter
+    private var seenRemark = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,17 +42,30 @@ class MainActivity : AppCompatActivity() {
         binding.refreshButton.setOnClickListener { loadBills() }
 
         binding.takePictureButton.setOnClickListener {
-            remarkDialog {
+            if (seenRemark) {
                 val intent = Intent(application, ReceiptScannerActivity::class.java)
                 startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+            } else {
+                remarkDialog {
+                    seenRemark = true
+                    val intent = Intent(application, ReceiptScannerActivity::class.java)
+                    startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+                }
             }
         }
 
         binding.uploadImageButton.setOnClickListener {
-            remarkDialog {
+            if (seenRemark) {
                 val intent = Intent(Intent.ACTION_PICK)
                 intent.type = "image/*"
                 startActivityForResult(intent, IMAGE_FROM_GALLERY)
+            } else {
+                remarkDialog {
+                    seenRemark = true
+                    val intent = Intent(Intent.ACTION_PICK)
+                    intent.type = "image/*"
+                    startActivityForResult(intent, IMAGE_FROM_GALLERY)
+                }
             }
         }
     }
@@ -80,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         }, object : BillsAdapter.OnLongClickItemListener {
             override fun onLongClickItem(b: Bill) {
                 AlertDialog.Builder(this@MainActivity)
-                    .setMessage("Are you sure you want to bill from ${b.merchant}?")
+                    .setMessage("Are you sure you want to remove ${b.merchant}?")
                     .setPositiveButton("Continue") { _, _ ->
                         Log.d(TAG, "Will delete ${b.merchant}")
 
@@ -148,6 +161,8 @@ class MainActivity : AppCompatActivity() {
                 uploadFile(file)
             }
         } else if (requestCode == RECEIPT_SCANNER_ACTIVITY && resultCode == RESULT_OK) {
+            loadBills()
+        } else if (requestCode == DETAILS_ACTIVITY && resultCode == RESULT_OK) {
             loadBills()
         }
     }

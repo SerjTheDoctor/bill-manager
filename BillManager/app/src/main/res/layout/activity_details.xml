@@ -6,17 +6,174 @@
     android:layout_height="match_parent"
     tools:context=".DetailsActivity">
 
-    <TextView
-        android:id="@+id/lei2"
-        android:layout_width="wrap_content"
+    <ScrollView
+        android:id="@+id/scrollView2"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:text="@string/lei"
-        android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="@+id/deTotal"
-        app:layout_constraintStart_toEndOf="@+id/deTotal"
-        app:layout_constraintTop_toTopOf="@+id/deTotal"
-        app:layout_constraintVertical_bias="0.65999997" />
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@+id/deTitle"
+        tools:layout_editor_absoluteX="107dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/innerConstraint"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/deStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="24dp"
+                android:text="Processed"
+                app:layout_constraintBottom_toBottomOf="@+id/textView4"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/textView4" />
+
+            <EditText
+                android:id="@+id/deName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:drawableStart="@drawable/ic_round_notes_20"
+                android:drawablePadding="4dp"
+                android:ems="10"
+                android:hint="Name"
+                android:inputType="textPersonName"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <EditText
+                android:id="@+id/deMerchant"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@drawable/ic_round_store_20"
+                android:drawablePadding="4dp"
+                android:ems="10"
+                android:hint="Merchant"
+                android:inputType="textPersonName"
+                app:layout_constraintStart_toStartOf="@+id/deName"
+                app:layout_constraintTop_toBottomOf="@id/deName" />
+
+            <TextView
+                android:id="@+id/deDate"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="3dp"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@drawable/ic_round_date_range_20"
+                android:drawablePadding="4dp"
+                android:ems="10"
+                android:gravity="center_vertical"
+                android:hint="Date"
+                android:inputType="none"
+                android:textColor="#000000"
+                android:textSize="18sp"
+                app:layout_constraintStart_toStartOf="@+id/deName"
+                app:layout_constraintTop_toBottomOf="@id/deMerchant" />
+
+            <EditText
+                android:id="@+id/deTotal"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@drawable/ic_round_attach_money_20"
+                android:drawablePadding="4dp"
+                android:ems="10"
+                android:inputType="numberSigned|numberDecimal"
+                app:layout_constraintStart_toStartOf="@+id/deName"
+                app:layout_constraintTop_toBottomOf="@id/deDate" />
+
+            <TextView
+                android:id="@+id/lei2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/lei"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="@+id/deTotal"
+                app:layout_constraintStart_toEndOf="@id/deTotal"
+                app:layout_constraintTop_toTopOf="@id/deTotal"
+                app:layout_constraintVertical_bias="0.52" />
+
+            <View
+                android:id="@+id/divider1"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="8dp"
+                android:background="@android:color/darker_gray"
+                app:layout_constraintBottom_toTopOf="@+id/textView4"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginBottom="8dp"
+                android:background="@android:color/darker_gray"
+                app:layout_constraintBottom_toTopOf="@+id/textView2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/textView4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="Receipt"
+                android:textColor="#000000"
+                android:textSize="20sp"
+                app:layout_constraintStart_toStartOf="@+id/deTotal"
+                app:layout_constraintTop_toBottomOf="@id/itemsRecyclerView" />
+
+            <ImageView
+                android:id="@+id/deBillImage"
+                android:layout_width="160dp"
+                android:layout_height="200dp"
+                android:layout_marginTop="16dp"
+                app:layout_constraintStart_toStartOf="@+id/textView4"
+                app:layout_constraintTop_toBottomOf="@+id/textView4"
+                app:srcCompat="@drawable/ic_baseline_image_not_supported_24" />
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="Items"
+                android:textColor="#000000"
+                android:textSize="20sp"
+                app:layout_constraintStart_toStartOf="@+id/deTotal"
+                app:layout_constraintTop_toBottomOf="@+id/deTotal" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/itemsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/textView2" />
+
+            <View
+                android:id="@+id/ghostSpace"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/deBillImage" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
 
     <TextView
         android:id="@+id/deTitle"
@@ -32,66 +189,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <EditText
-        android:id="@+id/deName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="24dp"
-        android:drawableStart="@drawable/ic_round_notes_20"
-        android:drawablePadding="4dp"
-        android:ems="10"
-        android:hint="Name"
-        android:inputType="textPersonName"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/deTitle" />
-
-    <EditText
-        android:id="@+id/deMerchant"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="64dp"
-        android:drawableStart="@drawable/ic_round_store_20"
-        android:drawablePadding="4dp"
-        android:ems="10"
-        android:hint="Merchant"
-        android:inputType="textPersonName"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/deName"
-        app:layout_constraintTop_toBottomOf="@+id/deName" />
-
-    <TextView
-        android:id="@+id/deDate"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginStart="4dp"
-        android:layout_marginTop="8dp"
-        android:drawablePadding="4dp"
-        android:ems="10"
-        android:gravity="center_vertical"
-        android:hint="Date"
-        android:inputType="none"
-        android:textSize="18sp"
-        app:drawableStartCompat="@drawable/ic_round_date_range_20"
-        app:layout_constraintStart_toStartOf="@+id/deName"
-        app:layout_constraintTop_toBottomOf="@+id/deMerchant" />
-
-    <EditText
-        android:id="@+id/deTotal"
-        android:layout_width="100dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:drawableStart="@drawable/ic_round_attach_money_20"
-        android:drawablePadding="4dp"
-        android:ems="10"
-        android:inputType="numberSigned|numberDecimal"
-        app:layout_constraintStart_toStartOf="@+id/deName"
-        app:layout_constraintTop_toBottomOf="@+id/deDate" />
-
     <ImageButton
         android:id="@+id/backButton"
         android:layout_width="wrap_content"
@@ -103,26 +200,40 @@
         app:layout_constraintTop_toTopOf="@+id/deTitle"
         app:srcCompat="@drawable/ic_round_arrow_back_ios_new_24" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/itemsRecyclerView"
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:background="#00E6E6E6"
+        android:text="Save"
+        app:layout_constraintBottom_toBottomOf="@+id/deTitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/deTitle" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/deBigConstraint"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:elevation="3dp"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView2" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="24dp"
-        android:text="Items"
-        android:textColor="#000000"
-        android:textSize="20sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/deTotal" />
+        <ImageView
+            android:id="@+id/deBigBillImage"
+            android:layout_width="350dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="130dp"
+            android:layout_marginBottom="165dp"
+            android:contentDescription="Big Receipt"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_baseline_image_not_supported_24" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

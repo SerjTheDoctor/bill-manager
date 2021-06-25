@@ -14,6 +14,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.serjthedoctor.billmanager.R
 import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.BillStatus
+import com.serjthedoctor.billmanager.lib.limit
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -65,7 +66,7 @@ class BillsAdapter internal constructor(
                 holder.name.text = ("$date at ${currentItem.merchant}".limit(25))
             }
         } else {
-            holder.name.text = currentItem.name?.limit(33)
+            holder.name.text = currentItem.name?.limit(27)
         }
 
         if (currentItem.price == null) {
@@ -129,13 +130,5 @@ class BillsAdapter internal constructor(
 
     interface OnLongClickItemListener {
         fun onLongClickItem(b: Bill)
-    }
-
-    private fun String.limit(chars: Int): String {
-        return if (length < chars) {
-            this
-        } else {
-            this.substring(0, chars - 3) + "..."
-        }
     }
 }
