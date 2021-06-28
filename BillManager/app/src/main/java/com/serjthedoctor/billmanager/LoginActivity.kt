@@ -23,6 +23,11 @@ class LoginActivity : AppCompatActivity() {
 
         authModel = ViewModelProvider(this).get(AuthModel::class.java)
 
+        binding.loginToRegister.setOnClickListener {
+            val intent = Intent(application, RegisterActivity::class.java)
+            startActivity(intent)
+        }
+
         binding.loginSubmitButton.setOnClickListener {
             val email = binding.loginEmailInput.text.toString()
             val password = binding.loginPasswordInput.text.toString()

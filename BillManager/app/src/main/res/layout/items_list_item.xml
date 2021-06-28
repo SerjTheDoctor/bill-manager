@@ -5,15 +5,36 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
+    <TextView
+        android:id="@+id/lei3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/lei"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/deItemUnitPrice"
+        app:layout_constraintStart_toEndOf="@+id/deItemUnitPrice"
+        app:layout_constraintTop_toTopOf="@+id/deItemUnitPrice" />
+
+    <TextView
+        android:id="@+id/lei4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="4dp"
+        android:text="@string/lei"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/deItemPrice"
+        app:layout_constraintEnd_toEndOf="@+id/deItemName"
+        app:layout_constraintTop_toTopOf="@+id/deItemPrice" />
+
     <EditText
         android:id="@+id/deItemName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="64dp"
+        android:layout_marginEnd="16dp"
         android:ems="10"
-        android:hint="Name"
+        android:hint="@string/name"
         android:inputType="textPersonName"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,7 +42,7 @@
 
     <EditText
         android:id="@+id/deItemQuantity"
-        android:layout_width="70dp"
+        android:layout_width="50dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:ems="10"
@@ -35,7 +56,7 @@
 
     <EditText
         android:id="@+id/deItemUnit"
-        android:layout_width="80dp"
+        android:layout_width="70dp"
         android:layout_height="wrap_content"
         android:ems="10"
         android:inputType="textPersonName"
@@ -46,7 +67,7 @@
         app:layout_constraintTop_toTopOf="@+id/deItemQuantity" />
 
     <TextView
-        android:id="@+id/textView3"
+        android:id="@+id/deX"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
@@ -56,16 +77,42 @@
         app:layout_constraintStart_toEndOf="@+id/deItemUnit"
         app:layout_constraintTop_toTopOf="@+id/deItemUnit" />
 
+    <TextView
+        android:id="@+id/deEqual"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="="
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="@+id/deItemPrice"
+        app:layout_constraintEnd_toStartOf="@+id/deItemPrice"
+        app:layout_constraintStart_toEndOf="@+id/lei3"
+        app:layout_constraintTop_toTopOf="@+id/deItemPrice" />
+
     <EditText
         android:id="@+id/deItemUnitPrice"
-        android:layout_width="80dp"
+        android:layout_width="70dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="6dp"
         android:ems="10"
         android:hint="Unit Price"
         android:inputType="number|numberDecimal"
+        android:textAlignment="textEnd"
         android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@+id/deItemQuantity"
-        app:layout_constraintStart_toEndOf="@+id/textView3"
+        app:layout_constraintStart_toEndOf="@+id/deX"
         app:layout_constraintTop_toTopOf="@+id/deItemQuantity" />
+
+    <EditText
+        android:id="@+id/deItemPrice"
+        android:layout_width="70dp"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Total price"
+        android:inputType="number|numberDecimal"
+        android:textAlignment="textEnd"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toBottomOf="@+id/deItemQuantity"
+        app:layout_constraintEnd_toStartOf="@+id/lei4"
+        app:layout_constraintTop_toTopOf="@+id/deItemQuantity"
+        app:layout_constraintVertical_bias="0.0" />
 </androidx.constraintlayout.widget.ConstraintLayout>

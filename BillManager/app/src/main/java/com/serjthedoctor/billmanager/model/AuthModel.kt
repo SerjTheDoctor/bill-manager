@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.serjthedoctor.billmanager.LoginActivity
 import com.serjthedoctor.billmanager.domain.LoginRequest
 import com.serjthedoctor.billmanager.domain.AuthResponse
+import com.serjthedoctor.billmanager.domain.RegisterRequest
 import com.serjthedoctor.billmanager.domain.User
 import com.serjthedoctor.billmanager.service.AuthService
 import com.serjthedoctor.billmanager.service.CustomCallback
@@ -86,6 +87,42 @@ class AuthModel(application: Application): AndroidViewModel(application) {
 
             override fun onFailure(call: Call<AuthResponse>, t: Throwable) {
                 val errorMessage = "Login failed unexpectedly: ${t.message}"
+                Log.e(TAG, errorMessage, t)
+                onFailure(errorMessage)
+            }
+        })
+    }
+
+    fun register(name: String, email: String, password: String,
+                 onSuccess: (success: AuthResponse) -> Unit = { _ -> },
+                 onFailure: (error: String?) -> Unit = { _ -> }
+    ) {
+        val requestData = RegisterRequest(name, email, password)
+
+        service.register(requestData).enqueue(object : CustomCallback<AuthResponse>(app) {
+            override fun onSuccess(call: Call<AuthResponse>, response: Response<AuthResponse>) {
+                if (response.isSuccessful) {
+                    val body = response.body()
+
+                    if (body?.user != null) {
+                        val user = body.user as User
+                        sessionManager.setAuth(user, body.token)
+                        Log.d(TAG, "Registered successfully")
+                        onSuccess(body)
+                    } else {
+                        val errorMessage = "User is null after registration"
+                        Log.d(TAG, errorMessage)
+                        onFailure(errorMessage)
+                    }
+                } else {
+                    val errorMessage = "Register failed: ${response.message()}"
+                    Log.e(TAG, errorMessage)
+                    onFailure(errorMessage)
+                }
+            }
+
+            override fun onFailure(call: Call<AuthResponse>, t: Throwable) {
+                val errorMessage = "Register failed unexpectedly: ${t.message}"
                 Log.e(TAG, errorMessage, t)
                 onFailure(errorMessage)
             }

@@ -4,4 +4,9 @@
     <string name="search_bill">Search…</string>
     <string name="login">Login</string>
     <string name="lei">lei</string>
+    <string name="register">Register</string>
+    <string name="search_products">Search Products</string>
+    <string name="back_button">Back button</string>
+    <string name="search_by_name">Search by name...</string>
+    <string name="name">Name</string>
 </resources>

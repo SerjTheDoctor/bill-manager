@@ -22,5 +22,6 @@ data class Bill (
 enum class BillStatus {
     QUEUED,
     RUNNING,
-    PROCESSED
+    PROCESSED,
+    ERROR
 }

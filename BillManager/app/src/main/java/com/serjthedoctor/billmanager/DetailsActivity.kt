@@ -21,8 +21,6 @@ import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.BillStatus
 import com.serjthedoctor.billmanager.lib.limit
 import com.serjthedoctor.billmanager.model.BillsModel
-import kotlinx.android.synthetic.main.activity_details.*
-import kotlinx.android.synthetic.main.activity_main.view.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -52,10 +50,10 @@ class DetailsActivity : AppCompatActivity() {
             }
         }
 
-        backButton.setOnClickListener {
+        binding.backButton.setOnClickListener {
             finish()
         }
-        saveButton.setOnClickListener {
+        binding.saveButton.setOnClickListener {
             saveBillDetails()
         }
     }

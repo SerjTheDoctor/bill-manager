@@ -39,6 +39,11 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView(binding.billsList)
         loadBills()
 
+        binding.searchProductsButton.setOnClickListener {
+            val intent = Intent(application, ProductsActivity::class.java)
+            startActivityForResult(intent, PRODUCTS_ACTIVITY)
+        }
+
         binding.refreshButton.setOnClickListener { loadBills() }
 
         binding.takePictureButton.setOnClickListener {
@@ -174,5 +179,6 @@ class MainActivity : AppCompatActivity() {
         const val RECEIPT_SCANNER_ACTIVITY = 1
         private const val IMAGE_FROM_GALLERY = 2
         const val DETAILS_ACTIVITY = 3
+        const val PRODUCTS_ACTIVITY = 4
     }
 }
