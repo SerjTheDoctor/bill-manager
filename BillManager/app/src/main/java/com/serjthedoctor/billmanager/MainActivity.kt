@@ -1,16 +1,20 @@
 package com.serjthedoctor.billmanager
 
+import android.Manifest
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,13 +24,19 @@ import com.serjthedoctor.billmanager.adapter.BillsAdapter
 import com.serjthedoctor.billmanager.databinding.ActivityMainBinding
 import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.BillStatus
+import com.serjthedoctor.billmanager.lib.DebouncingSearchTextListener
 import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var model: BillsModel
     private lateinit var adapter: BillsAdapter
+    private lateinit var currentPhotoPath: String
+    private lateinit var allBills: List<Bill>
     private var seenRemark = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,15 +56,19 @@ class MainActivity : AppCompatActivity() {
 
         binding.refreshButton.setOnClickListener { loadBills() }
 
+        binding.searchBillInputText.addTextChangedListener(
+            DebouncingSearchTextListener(this@MainActivity.lifecycle, debounceTime = 100) { text ->
+                adapter.setItems(filterBills(text))
+            }
+        )
+
         binding.takePictureButton.setOnClickListener {
             if (seenRemark) {
-                val intent = Intent(application, ReceiptScannerActivity::class.java)
-                startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+                openCamera()
             } else {
                 remarkDialog {
                     seenRemark = true
-                    val intent = Intent(application, ReceiptScannerActivity::class.java)
-                    startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+                    openCamera()
                 }
             }
         }
@@ -75,6 +89,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun openCamera() {
+        if (allPermissionsGranted()) {
+            dispatchTakePictureIntent()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
+            )
+        }
+    }
+
     private fun remarkDialog(continuation: () -> Unit) {
         AlertDialog.Builder(this)
             .setMessage("Please make sure that the photo covers all the receipt and the background is in high contrast with the document")
@@ -92,7 +118,7 @@ class MainActivity : AppCompatActivity() {
                     detailsIntent.putExtra(DetailsActivity.BILL_ID, b.id)
                     startActivityForResult(detailsIntent, DETAILS_ACTIVITY)
                 } else {
-                    Snackbar.make(binding.root, "Receipt not yet processed", Snackbar.LENGTH_SHORT)
+                    Snackbar.make(binding.root, "Receipt has no details", Snackbar.LENGTH_SHORT).show()
                 }
             }
         }, object : BillsAdapter.OnLongClickItemListener {
@@ -119,9 +145,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadBills() {
+        binding.searchBillInputText.setText("")
         binding.progressBar.visibility = ProgressBar.VISIBLE
         model.getBills(
             onSuccess = { bills ->
+                allBills = bills
                 adapter.setItems(bills)
                 binding.progressBar.visibility = ProgressBar.INVISIBLE
             },
@@ -130,6 +158,64 @@ class MainActivity : AppCompatActivity() {
                 binding.progressBar.visibility = ProgressBar.INVISIBLE
             }
         )
+    }
+
+    private fun filterBills(query: String?) : List<Bill> {
+        if (query.isNullOrBlank() || query.isEmpty()) return allBills
+
+        val filteredBills = mutableListOf<Bill>()
+
+        for (bill in allBills) {
+            if (bill.name?.toLowerCase(Locale.ROOT)?.contains(query.toLowerCase(Locale.ROOT)) == true ||
+                bill.merchant?.toLowerCase(Locale.ROOT)?.contains(query.toLowerCase(Locale.ROOT)) == true) {
+                filteredBills.add(bill)
+            }
+        }
+
+        return filteredBills
+    }
+
+    private fun dispatchTakePictureIntent() {
+        val intent = Intent(application, ReceiptScannerActivity::class.java)
+        startActivityForResult(intent, RECEIPT_SCANNER_ACTIVITY)
+
+        // Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+        //     // Ensure that there's a camera activity to handle the intent
+        //     takePictureIntent.resolveActivity(packageManager)?.also {
+        //         // Create the File where the photo should go
+        //         val photoFile: File? = try {
+        //             createImageFile()
+        //         } catch (ex: IOException) {
+        //             // Error occurred while creating the File
+        //             null
+        //         }
+        //         // Continue only if the File was successfully created
+        //         photoFile?.also {
+        //             val photoURI: Uri = FileProvider.getUriForFile(
+        //                 this,
+        //                 "com.serjthedoctor.billmanager",
+        //                 it
+        //             )
+        //             takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+        //             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+        //         }
+        //     }
+        // }
+    }
+
+    private fun createImageFile(): File {
+        // Create an image file name
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ROOT).format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+
+        return File.createTempFile(
+            "JPEG_${timeStamp}_", /* prefix */
+            ".jpg", /* suffix */
+            storageDir /* directory */
+        ).apply {
+            // Save a file: path for use with ACTION_VIEW intents
+            currentPhotoPath = absolutePath
+        }
     }
 
     private fun getFile(uri: Uri): File {
@@ -169,7 +255,32 @@ class MainActivity : AppCompatActivity() {
             loadBills()
         } else if (requestCode == DETAILS_ACTIVITY && resultCode == RESULT_OK) {
             loadBills()
+        } else if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            Toast.makeText(this, "Took photo at $currentPhotoPath", Toast.LENGTH_SHORT).show()
+            val file = File(currentPhotoPath)
+            uploadFile(file)
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults: IntArray
+    ) {
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                dispatchTakePictureIntent()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permissions not granted by the user.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                finish()
+            }
+        }
+    }
+
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
     companion object {
@@ -180,5 +291,8 @@ class MainActivity : AppCompatActivity() {
         private const val IMAGE_FROM_GALLERY = 2
         const val DETAILS_ACTIVITY = 3
         const val PRODUCTS_ACTIVITY = 4
+        const val REQUEST_IMAGE_CAPTURE = 5
+        const val REQUEST_CODE_PERMISSIONS = 100
+        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 }

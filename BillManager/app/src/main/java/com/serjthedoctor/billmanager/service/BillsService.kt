@@ -8,8 +8,8 @@ import retrofit2.http.*
 
 interface BillsService {
     companion object {
-        const val FLASK_API = "http://192.168.0.127:5000"
-        const val RAILS_API = "http://192.168.0.127:3000"
+        const val FLASK_API = "http://192.168.0.126:5000"
+        const val RAILS_API = "http://192.168.0.126:3000"
     }
 
     @GET("/bills")

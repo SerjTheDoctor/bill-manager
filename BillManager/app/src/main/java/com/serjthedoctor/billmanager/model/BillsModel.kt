@@ -29,6 +29,7 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
             BillsService::class.java,
             BillsService.RAILS_API
     )
+    private val imageUtils = ImageUtils()
 
     fun getBills(
         onSuccess: (response: List<Bill>) -> Unit = {_ -> },
@@ -94,7 +95,7 @@ class BillsModel(application: Application) : AndroidViewModel(application) {
     ) {
         val token = getToken()
 
-        ImageUtils.ensurePortraitImageFile(file)
+        imageUtils.ensurePortraitImageFile(file)
 
         // MultipartBody.Part is used to send also the actual file name
         val requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file)

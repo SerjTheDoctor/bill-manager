@@ -155,9 +155,9 @@ class ReceiptScannerActivity : AppCompatActivity() {
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    val url = Uri.fromFile(photoFile)
+                    // val url = Uri.fromFile(photoFile)
 
-                    val msg = "Photo was successfully captured: $url"
+                    val msg = "Photo was successfully captured"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
 

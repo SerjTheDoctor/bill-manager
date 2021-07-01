@@ -97,9 +97,10 @@ class BillsAdapter internal constructor(
         }
 
         when (currentItem.status) {
-            BillStatus.QUEUED -> holder.status.setTextColor(Color.RED)
+            BillStatus.QUEUED -> holder.status.setTextColor(Color.CYAN)
             BillStatus.RUNNING -> holder.status.setTextColor(Color.parseColor("#CCCC00"))
             BillStatus.PROCESSED -> holder.status.setTextColor(Color.GREEN)
+            BillStatus.ERROR -> holder.status.setTextColor(Color.RED)
             else -> holder.status.setTextColor(Color.BLACK)
         }
 

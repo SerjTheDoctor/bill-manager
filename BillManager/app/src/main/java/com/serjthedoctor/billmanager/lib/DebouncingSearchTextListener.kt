@@ -14,11 +14,11 @@ import kotlinx.coroutines.*
 
 class DebouncingSearchTextListener(
     lifecycle: Lifecycle,
+    private val debounceTime: Long = 1000,
     private val onTextChange: (String?) -> Unit
 ): TextWatcher, LifecycleObserver {
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
     private var searchJob: Job? = null
-    var debounceTime: Long = 1000
 
     init {
         lifecycle.addObserver(this)
