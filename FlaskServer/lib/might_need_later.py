@@ -1,6 +1,5 @@
 from lib.text_manager import TextManager
 from texttable import Texttable
-import lib.words as Words
 import numpy as np
 import cv2
 
@@ -18,13 +17,26 @@ def print_data_table(data):
 
     print(table.draw())
 
+IMPORTANT_WORDS = [
+    'S.C.', 'PROFI ROM FOOD', 'S.R.L',
+    '1.000', 'Buc', 'x', '2.69',
+    'SUGUS', 'JELLYMANIA', 'VIE', '2.69 B',
+    '13.79',
+    'PUFINA', 'HARTIE', 'IGIEN8', '13.79 A',
+    '2.000', '6.99',
+    'APA', 'DE', 'IZVOR', 'IZVOARE', '13.98 B',
+    '2.49',
+    'CIPI', 'ACADELE', 'POPSY', '4.98 B',
+    'TOTAL', '35.44'
+]
+
 def print_compared_text(text1, text2):
     # Compare side-by-side two texts
     lines1 = text1.split("\n")
     lines2 = text2.split("\n")
 
-    fit1, total = TextManager.compute_fitness(text1, Words.IMPORTANT_WORDS)
-    fit2, _ = TextManager.compute_fitness(text2, Words.IMPORTANT_WORDS)
+    fit1, total = TextManager.compute_fitness(text1, IMPORTANT_WORDS)
+    fit2, _ = TextManager.compute_fitness(text2, IMPORTANT_WORDS)
 
     max_length_1 = max([len(line) for line in lines1])
 

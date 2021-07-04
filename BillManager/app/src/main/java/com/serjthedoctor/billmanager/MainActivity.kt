@@ -25,6 +25,7 @@ import com.serjthedoctor.billmanager.databinding.ActivityMainBinding
 import com.serjthedoctor.billmanager.domain.Bill
 import com.serjthedoctor.billmanager.domain.BillStatus
 import com.serjthedoctor.billmanager.lib.DebouncingSearchTextListener
+import com.serjthedoctor.billmanager.model.AuthModel
 import com.serjthedoctor.billmanager.model.BillsModel
 import java.io.File
 import java.io.IOException
@@ -34,6 +35,7 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var model: BillsModel
+    private lateinit var authModel: AuthModel
     private lateinit var adapter: BillsAdapter
     private lateinit var currentPhotoPath: String
     private lateinit var allBills: List<Bill>
@@ -45,6 +47,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         model = ViewModelProvider(this).get(BillsModel::class.java)
+        authModel = ViewModelProvider(this).get(AuthModel::class.java)
 
         setupRecyclerView(binding.billsList)
         loadBills()
@@ -55,6 +58,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.refreshButton.setOnClickListener { loadBills() }
+
+        binding.logoutButton.setOnClickListener {
+            authModel.logout()
+            val intent = Intent(application, LoginActivity::class.java)
+            startActivity(intent)
+        }
 
         binding.searchBillInputText.addTextChangedListener(
             DebouncingSearchTextListener(this@MainActivity.lifecycle, debounceTime = 100) { text ->
@@ -292,6 +301,7 @@ class MainActivity : AppCompatActivity() {
         const val DETAILS_ACTIVITY = 3
         const val PRODUCTS_ACTIVITY = 4
         const val REQUEST_IMAGE_CAPTURE = 5
+        const val LOGIN_ACTIVITY = 6
         const val REQUEST_CODE_PERMISSIONS = 100
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }

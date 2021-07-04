@@ -18,6 +18,18 @@
         app:layout_constraintTop_toTopOf="@+id/textView"
         app:srcCompat="@drawable/ic_round_manage_search_30" />
 
+    <ImageButton
+        android:id="@+id/logoutButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:background="#00FFFFFF"
+        android:contentDescription="@string/back_button"
+        app:layout_constraintBottom_toBottomOf="@+id/textView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textView"
+        app:srcCompat="@drawable/ic_round_logout_30" />
+
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"

@@ -11,40 +11,38 @@ def process(path, ext=None, env='development'):
     pprint("####### " + path + " #######")
 
     # -- Image processing -- #
+    image_manager = ImageManager(path, env)
     image_params = {
         'de_skew_binary_block_size': 17,
         'de_skew_binary_offset': 10,
     }
-    if env != 'development':
-        image_params['show_progress_images'] = False
-    image = ImageManager.process(path, image_params)
+    image = image_manager.process(image_params)
 
-    # cv2.imwrite('processedimage.jpg', image)
+    # cv2.imwrite('processed_image.jpg', image)
 
     # -- Text parsing -- #
+    file_ext = get_extension(path) if ext is None else ext
+    text_manager = TextManager(image, file_ext, env)
     text_params = {
         'ocr-engine': 'google'
     }
-    file_ext = get_extension(path) if ext is None else ext
-    recognized_data, all_data = TextManager.recognize(image, file_ext, text_params)
-
-    print(pretty_bill(recognized_data))
+    recognized_data, delimiters, all_data = text_manager.recognize(text_params)
 
     # -- Augmented image -- #
 
     if env == 'development':
-        pprint('Augmenting image')
-        colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        augmented_image = colored_image#augment_image(image, all_data)
+        print(pretty_bill(recognized_data))
 
-        delimiters = recognized_data['delimiters']
+        pprint('Augmenting image')
+        # colored_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        augmented_image = augment_image(image, all_data)
+
         if delimiters[0] is not None:
             augmented_image = draw_y_delimiter(augmented_image, delimiters[0])
 
         if delimiters[1] is not None:
             augmented_image = draw_y_delimiter(augmented_image, delimiters[1])
 
-        cv2.imwrite('delimited_{}.jpg'.format(path.split('/')[-1]), augmented_image)
         show_image(augmented_image, path, only_destroy_this=False)
 
     return recognized_data
@@ -66,11 +64,10 @@ def process_all():
     print(results)
 
 if __name__ == '__main__':
-    process('../uploads/carrefour-1.jpeg')
+    # process('../uploads/fusionCuisine-2.jpeg')
     # process_all()
 
     cv2.waitKey(0)  # waits until a key is pressed
     cv2.destroyAllWindows()
 
     print("Finished")
-

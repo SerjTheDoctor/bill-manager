@@ -93,6 +93,10 @@ class AuthModel(application: Application): AndroidViewModel(application) {
         })
     }
 
+    fun logout() {
+        sessionManager.clearAuthToken()
+    }
+
     fun register(name: String, email: String, password: String,
                  onSuccess: (success: AuthResponse) -> Unit = { _ -> },
                  onFailure: (error: String?) -> Unit = { _ -> }

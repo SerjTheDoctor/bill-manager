@@ -4,7 +4,8 @@ from typing import List, Optional
 from datetime import datetime
 from lib.utils import pretty_list
 from lib.image_helper import image2bytes, show_quick_augmented_image
-from lib.item_recognizer import extract_items, split_by_regions, search_total
+from lib.item_recognizer import ItemRecognizer
+from lib.text_processor import TextProcessor
 from model import ExtractedTree, Node, NodeType
 from model import ExtractedObject
 from texttable import Texttable
@@ -14,45 +15,57 @@ import numpy as np
 import random
 
 class TextManager:
-    @staticmethod
-    def recognize(image, image_ext, params=None):
+    def __init__(self, image, image_file_extension, environment):
+        self.image = image
+        self.extension = image_file_extension
+        self.debug = environment == 'development'
+        self.item_recognizer = ItemRecognizer(image, environment)
+        self.text_processor = TextProcessor(environment)
+
+    def recognize(self, params=None):
         if params is None:
             params = {}
 
         ocr = params.get('ocr-engine', 'tesseract')
 
-        pprint('Extracting data using {} engine'.format(ocr.capitalize()))
+        self.pprint('Extracting data using {} engine'.format(ocr.capitalize()))
 
         if ocr == 'tesseract':
-            data = TextManager.extract_tesseract(image)
+            data = self.extract_tesseract(self.image)
         else:
-            data = TextManager.extract_google_vision(image, image_ext)
+            data = self.extract_google_vision()
 
-        date = TextManager.extract_date(data, image)
-        total = TextManager.extract_total(data, image.shape, image)
-        store = TextManager.extract_store(data, image)
+        date = self.extract_date(data)
+        total = self.extract_total(data)
+        store = self.extract_store(data)
 
-        items = extract_items(data, image)
+        date = self.text_processor.process_date(date)
+        total = self.text_processor.process_total(total)
+        store = self.text_processor.process_store(store)
 
-        d1, d2 = split_by_regions(data, image.shape)
+        items = self.item_recognizer.extract_items(data)
+
+        d1, d2 = self.item_recognizer.split_by_regions(data)
 
         return {
             'date': date,
             'total': total,
             'store': store,
             'items': items,
-            'delimiters': [d1, d2]
-        }, data
+        }, [d1, d2], data
 
-    @staticmethod
-    def extract_google_vision(image, image_extension) -> ExtractedTree:
+    def extract_google_vision(self) -> ExtractedTree:
         client = vision.ImageAnnotatorClient()
 
-        bytes_image = image2bytes(image, image_extension)
+        bytes_image = image2bytes(self.image, self.extension)
         vision_image = vision.Image(content=bytes_image)
 
         data = []
         response = client.document_text_detection(image=vision_image)
+
+        if len(response.full_text_annotation.pages) <= 0:
+            raise Exception("No text detected")
+
         blocks = response.full_text_annotation.pages[0].blocks
 
         # print(blocks)
@@ -83,9 +96,8 @@ class TextManager:
 
         return tree_data
 
-    @staticmethod
-    def extract_tesseract(image, language='ron+eng') -> List[ExtractedObject]:
-        data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
+    def extract_tesseract(self, language='ron+eng') -> List[ExtractedObject]:
+        data = pytesseract.image_to_data(self.image, lang=language, output_type=pytesseract.Output.DICT)
 
         if len(data) == 0:
             return []
@@ -105,7 +117,7 @@ class TextManager:
             extracted_object = ExtractedObject.from_tesseract(object_details)
             vertical_data.append(extracted_object)
 
-        vertical_data = TextManager.reindex_blocks(vertical_data)
+        vertical_data = self.reindex_blocks(vertical_data)
 
 
         # DEBUG
@@ -114,8 +126,7 @@ class TextManager:
 
         return vertical_data
 
-    @staticmethod
-    def reindex_blocks(data: List[ExtractedObject]):
+    def reindex_blocks(self, data: List[ExtractedObject]):
         index_mapping = {}
         index = 1
 
@@ -163,26 +174,28 @@ class TextManager:
 
         print(table.draw())
 
-    @staticmethod
-    def extract_date(data: ExtractedTree, image):
-        texts = [obj.text for obj in data.get_words()]
+    def extract_date(self, data: ExtractedTree):
         words = data.get_words()
 
         for word in words:
-            if len(word.text) < 5 or len(word.text) > 15:
+            if len(word.text) < 5:
                 continue
 
             # 12-10-2021 and other delimiters
             possible_date = re.search('.?.[-.,|/].?.[-.,|/][12][0-9]{3}', word.text)
 
+            if not possible_date:
+                # 2021-10-12
+                possible_date = re.search('[12][0-9]{3}[-.,|/].?.[-.,|/].?.', word.text)
+
             if possible_date:
-                # show_quick_augmented_image(image, [word])
-                return possible_date[0]
+                if self.debug:
+                    show_quick_augmented_image(self.image, [word])
+                return possible_date.group()
         return None
 
-    @staticmethod
-    def extract_total(data: ExtractedTree, image_shape, image):
-        total_node = search_total(data, image_shape[1])
+    def extract_total(self, data: ExtractedTree):
+        total_node = self.item_recognizer.search_total(data, self.image.shape[1])
         if total_node is None:
             return None
 
@@ -191,49 +204,24 @@ class TextManager:
         possible_total = re.search('[0-9]+[.,][0-9]{2}', total_line.text)
 
         if possible_total:
-            # show_quick_augmented_image(image, [total_line])
+            if self.debug:
+                show_quick_augmented_image(self.image, [total_line])
             return possible_total[0]
 
         return None
 
-    @staticmethod
-    def extract_store(data: ExtractedTree, image):
+    def extract_store(self, data: ExtractedTree):
         # Not confirmed from a legitimate source, but most of the time
         # the store is located on the first line in the document
         first_line = data.get_lines()[0]
         store = first_line.text
 
-        store = re.sub('^S[.]?C[.]? ', '', store)  # Exclude S.C.
-        store = re.sub(' S[.]?A[.]?$', '', store)  # Exclude S.A.
-        store = re.sub(' S[.]?R[.]?L[.]?$', '', store)  # Exclude S.R.L.
-        store = re.sub('[^a-zA-Z ]', '', store)  # Exclude non-alpha characters
-        store = re.sub(' {2,}', ' ', store)  # Remove multiple spaces
-
-        # show_quick_augmented_image(image, [first_line])
+        if self.debug:
+            show_quick_augmented_image(self.image, [first_line])
 
         return store.strip()
 
-    # SHOULD BE REMOVED
-    @staticmethod
-    def get_lines(data: List[ExtractedObject]):
-        def key(eo: ExtractedObject):
-            return '{}-{}-{}'.format(eo.block, eo.par, eo.line)
-
-        lines = {}
-
-        for d in data:
-            k = key(d)
-
-            if k not in lines:
-                new_obj = d.clone()
-                new_obj.word = None
-                lines[k] = new_obj
-            else:
-                lines[k].expand_with(d)
-
-        return list(lines.values())
-
-
-def pprint(message):
-    now = datetime.now().strftime('%H:%M:%S.%f')
-    print(str(now) + ' [TextManager] ' + str(message))
+    def pprint(self, message):
+        if self.debug:
+            now = datetime.now().strftime('%H:%M:%S.%f')
+            print(str(now) + ' [TextManager] ' + str(message))

@@ -38,12 +38,13 @@ def image2bytes(image, extension: str):
 
     return encoded_image.tobytes()
 
+
 def show_quick_augmented_image(image, data: List[Node], wait=True):
     tree = ExtractedTree()
     tree.root.children = data
 
     image = augment_image(image, tree, NodeType.LINE)
-    title = 'Quick Augmented Image '# + str(random.randint(0, 10))
+    title = 'Quick Augmented Image '    # + str(random.randint(0, 10))
     show_image(image, title, wait=wait)
 
 def augment_image(image, data_tree: ExtractedTree, nodes_type=NodeType.LINE, scale=1, pad=0):
@@ -63,8 +64,8 @@ def augment_image(image, data_tree: ExtractedTree, nodes_type=NodeType.LINE, sca
         b = random.randrange(256)
         color = (240, 174, 0)    # (r, g, b)
 
-        colored_image = cv2.rectangle(colored_image, start, end, color, 1)
-        cv2.imwrite('lines.jpg', colored_image)
+        colored_image = cv2.rectangle(colored_image, start, end, color, 2)
+        # cv2.imwrite('lines.jpg', colored_image)
 
         # text_origin = (start[0], start[1] - 5)
         # colored_image = cv2.putText(colored_image, str(obj), text_origin, cv2.FONT_HERSHEY_PLAIN, 0.7, color)
@@ -90,21 +91,20 @@ def draw_x_delimiter(image, del_x, color=(255, 0, 0)):
     return image
 
 def order_points(pts):
-    # initialize a list of coordinates
-    rect = np.zeros((4, 2), dtype="float32")
+    new_pts = np.zeros((4, 2), dtype="float32")
 
     # the top-left point will have the smallest sum, whereas
     # the bottom-right point will have the largest sum
     s = pts.sum(axis=1)
-    rect[0] = pts[np.argmin(s)]
-    rect[2] = pts[np.argmax(s)]
+    new_pts[0] = pts[np.argmin(s)]
+    new_pts[2] = pts[np.argmax(s)]
 
     # now, compute the difference between the points, the
     # top-right point will have the smallest difference,
     # whereas the bottom-left will have the largest difference
     diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)]
-    rect[3] = pts[np.argmax(diff)]
+    new_pts[1] = pts[np.argmin(diff)]
+    new_pts[3] = pts[np.argmax(diff)]
 
     # return the ordered coordinates
-    return rect
+    return new_pts

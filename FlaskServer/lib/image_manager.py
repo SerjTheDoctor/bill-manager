@@ -8,68 +8,70 @@ from datetime import datetime
 
 # Maybe remove class and leave only methods
 class ImageManager:
-    @staticmethod
-    def process(path, params=None):
+    def __init__(self, path, environment, debug=None):
+        self.path = path
+        self.env = environment
+        self.debug = debug if debug is not None else environment == 'development'
+
+    def process(self, params=None):
         if params is None:
             params = {}
 
-        if isinstance(path, str):
-            image = open_image(path)
+        if isinstance(self.path, str):
+            image = open_image(self.path)
         else:
-            image = path
+            image = self.path
 
         original_image = image.copy()
         image_ratio = image.shape[0] / 500.0
         image = imutils.resize(image, height=500)
 
-        edges_image = ImageManager.detect_edges(
+        edges_image = self.detect_edges(
             image,
             gaussian_kernel_size=params.get('gaussian_kernel_size', (5, 5)),
             canny_min=params.get('canny_min', 75),
-            canny_max=params.get('canny_max', 200),
-            visuals=params.get('show_progress_images', True)
+            canny_max=params.get('canny_max', 200)
         )
-        receipt_polygon, all_contours = ImageManager.find_receipt_contour(edges_image)
+        receipt_polygon, all_contours = self.find_receipt_contour(edges_image)
 
-        if params.get('show_progress_images', True):
-            # ImageManager.draw_contours(image, all_contours, color='all_random', thickness=1)
-            ImageManager.draw_contours(image, [receipt_polygon])
+        if self.debug:
+            # self.draw_contours(image, all_contours, color='all_random', thickness=1)
+            self.draw_contours(image, [receipt_polygon])
 
-        receipt_centered_image = ImageManager.de_skew_image(
+        receipt_centered_image = self.de_skew_image(
             original_image,
             image_ratio,
             receipt_polygon,
             binary_bsize=params.get('de_skew_binary_block_size', 11),
             binary_offset=params.get('de_skew_binary_offset', 10),
             binary_method=params.get('de_skew_binary_method', 'gaussian'),
-            visuals=params.get('show_progress_images', True)
         )
+
+        # cv2.imwrite('processed_image_2.jpg', receipt_centered_image)
 
         return imutils.resize(receipt_centered_image, height=1000)
 
 
-    @staticmethod
-    def apply_contrast_and_brightness(image, alpha=1, beta=60):
+    def apply_contrast_and_brightness(self, image, alpha=1, beta=60):
         # Applies brightness and contrast to the image
         # alpha - contrast (1.0 - 3.0)
         # beta  - brightness (0 - 100)
-        pprint('Applying contrast: {} and brightness: {}'.format(alpha, beta))
+        self.pprint('Applying contrast: {} and brightness: {}'.format(alpha, beta))
         return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
 
-    @staticmethod
-    def detect_edges(image, gaussian_kernel_size=(5, 5), canny_min=75, canny_max=200, visuals=True):
+    def detect_edges(self, image, gaussian_kernel_size=(5, 5), canny_min=75, canny_max=200):
         # convert the image to grayscale, blur it, and find edges in the image
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        pprint('Applying GaussianBlur with kernel size: {}'.format(gaussian_kernel_size))
+        self.pprint('Applying GaussianBlur with kernel size: {}'.format(gaussian_kernel_size))
         gray = cv2.GaussianBlur(gray, gaussian_kernel_size, 0)
         # gray = cv2.copyMakeBorder(gray, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=(0, 0, 0))
 
-        pprint('Running Canny Edge detector algorithm ({}, {})'.format(canny_min, canny_max))
+        self.pprint('Running Canny Edge detector algorithm ({}, {})'.format(canny_min, canny_max))
         edged = cv2.Canny(gray, canny_min, canny_max)
         # auto_edged = imutils.auto_canny(gray)
 
-        if visuals:
+        if self.debug:
             # pprint('Displaying current images')
             cv2.imshow("Original", image)
             # cv2.imwrite('original.jpg', image)
@@ -78,15 +80,14 @@ class ImageManager:
             cv2.imshow("Edges", edged)
             # cv2.imwrite('edges.jpg', edged)
 
-            # cv2.waitKey(0)
+            cv2.waitKey(0)
             # cv2.destroyAllWindows()
 
         return edged
 
-    @staticmethod
-    def find_receipt_contour(edges_image):
+    def find_receipt_contour(self, edges_image):
         # find the contours in the image with edges
-        pprint('Finding contours')
+        self.pprint('Finding contours')
         contours = cv2.findContours(edges_image.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # findContours returns different parameters depending on the version
@@ -113,21 +114,25 @@ class ImageManager:
             # can assume that we have found our receipt
             if len(approx) == 4:
                 receipt_contour = approx
-                pprint('Found receipt contour')
+                self.pprint('Found receipt contour')
                 break
 
         if receipt_contour is None:
-            pprint('No receipt contour found, bounding box the biggest polygon')
-            x, y, w, h = cv2.boundingRect(contours[0])
-            receipt_contour = np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]])
+            if len(contours) == 0:
+                self.pprint('No contour found, bounding box the document')
+                h, w = edges_image.shape
+                receipt_contour = np.array([[0, 0], [w, 0], [w, h], [0, h]])
+            else:
+                self.pprint('No receipt contour found, bounding box the biggest polygon')
+                x, y, w, h = cv2.boundingRect(contours[0])
+                receipt_contour = np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]])
 
         return receipt_contour, approx_contours
 
-    @staticmethod
-    def draw_contours(image, contours, color=(0, 255, 0), thickness=2):
+    def draw_contours(self, image, contours, color=(0, 255, 0), thickness=2):
         # show the contour (outline) of the piece of paper
         nr = len(contours)
-        pprint('Drawing {} contour{}'.format(nr, 's' if nr != 1 else ''))
+        self.pprint('Drawing {} contour{}'.format(nr, 's' if nr != 1 else ''))
 
         if len(color) == 3:
             cv2.drawContours(image, contours, -1, color, thickness)
@@ -157,15 +162,14 @@ class ImageManager:
             cv2.waitKey(0)
             cv2.destroyWindow("Contour")
 
-    @staticmethod
     def de_skew_image(
-            original_image, original_image_ratio, contour, binary_bsize=11,
-            binary_offset=10, binary_method='gaussian', visuals=True
+            self, original_image, original_image_ratio, contour,
+            binary_bsize=11, binary_offset=10, binary_method='gaussian'
     ):
         # apply the four point transform to obtain a top-down
         # view of the original image
-        pprint('Applying four point transformation and thresholding')
-        image = ImageManager.four_point_transform(original_image, contour.reshape(4, 2) * original_image_ratio)
+        self.pprint('Applying four point transformation and thresholding')
+        image = self.four_point_transform(original_image, contour.reshape(4, 2) * original_image_ratio)
         # image_s = image
         # convert the warped image to grayscale, then threshold it
         # to give it that 'black and white' paper effect
@@ -176,7 +180,7 @@ class ImageManager:
         threshed = threshold_local(image, binary_bsize, offset=binary_offset, method=binary_method)
         image = (image > threshed).astype("uint8") * 255
 
-        if visuals:
+        if self.debug:
             # show the original and scanned images
             # cv2.imshow("Original", imutils.resize(original_image, height=650))
             # cv2.imshow("De skewed simple", imutils.resize(image_s, height=650))
@@ -188,45 +192,40 @@ class ImageManager:
 
         return image
 
-    @staticmethod
-    def four_point_transform(image, pts):
-        # obtain a consistent order of the points and unpack them
-        rect = order_points(pts)
-        (tl, tr, br, bl) = rect
+    def four_point_transform(self, image, pts):
+        # order the points
+        source = order_points(pts)
+        (top_left, top_right, bottom_right, bottom_left) = source
 
-        # compute the width of the new image, which will be the
-        # maximum distance between bottom-right and bottom-left
-        # x-coordinates or the top-right and top-left x-coordinates
-        width_a = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        width_b = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        max_width = max(int(width_a), int(width_b))
+        # compute the width of the new image, which will be the maximum distance between
+        # the bottom_right and bottom_left x-coordinates or
+        # the top_right and top_left x-coordinates
+        width_1 = np.sqrt(((bottom_right[0] - bottom_left[0]) ** 2) + ((bottom_right[1] - bottom_left[1]) ** 2))
+        width_2 = np.sqrt(((top_right[0] - top_left[0]) ** 2) + ((top_right[1] - top_left[1]) ** 2))
+        max_width = max(int(width_1), int(width_2))
 
-        # compute the height of the new image, which will be the
-        # maximum distance between the top-right and bottom-right
-        # y-coordinates or the top-left and bottom-left y-coordinates
-        height_a = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        height_b = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-        max_height = max(int(height_a), int(height_b))
+        # compute the height of the new image, which will be the maximum distance between
+        # the top_right and bottom_right y-coordinates or
+        # the top_left and bottom_left y-coordinates
+        height_1 = np.sqrt(((top_right[0] - bottom_right[0]) ** 2) + ((top_right[1] - bottom_right[1]) ** 2))
+        height_2 = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) + ((top_left[1] - bottom_left[1]) ** 2))
+        max_height = max(int(height_1), int(height_2))
 
-        # now that we have the dimensions of the new image, construct
-        # the set of destination points to obtain a "birds eye view",
-        # (i.e. top-down view) of the image, again specifying points
-        # in the top-left, top-right, bottom-right, and bottom-left
-        # order
-        dst = np.array([
+        # construct the destination points
+        destination = np.array([
             [0, 0],
             [max_width - 1, 0],
             [max_width - 1, max_height - 1],
-            [0, max_height - 1]], dtype="float32")
+            [0, max_height - 1]
+        ], dtype="float32")
 
         # compute the perspective transform matrix and then apply it
-        matrix = cv2.getPerspectiveTransform(rect, dst)
+        matrix = cv2.getPerspectiveTransform(source, destination)
         warped = cv2.warpPerspective(image, matrix, (max_width, max_height))
 
-        # return the warped image
         return warped
 
-
-def pprint(message):
-    now = datetime.now().strftime('%H:%M:%S.%f')
-    print(str(now) + ' [ImageManager] ' + str(message))
+    def pprint(self, message):
+        if self.debug:
+            now = datetime.now().strftime('%H:%M:%S.%f')
+            print(str(now) + ' [ImageManager] ' + str(message))
